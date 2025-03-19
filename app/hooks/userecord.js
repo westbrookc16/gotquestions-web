@@ -62,10 +62,10 @@ export const useRecordVoice = () => {
 
     // Event handler when recording stops
     
-    mediaRecorder.onstop = () => {
+    mediaRecorder.onstop = async () => {
       // Creating a blob from accumulated audio chunks with WAV format
       const audioBlob = new Blob(chunks.current, { type: "audio/wav" });
-    setText(sendAudioToWhisper(audioBlob));  
+    setText(await sendAudioToWhisper(audioBlob));  
       // You can do something with the audioBlob, like sending it to a server or processing it further
     };
 
