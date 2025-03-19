@@ -1,13 +1,15 @@
 "use client";
 import { useRecordVoice } from "../hooks/userecord";
+import {useState} from "react";
 import Content from "@/app/components/content";
 
 const RecordButton = () => {
   const { startRecording, stopRecording, recording, text } = useRecordVoice();
+  const [isLoading,setIsLoading]=useState(false);
   return (<div>
-    <button onClick={recording ? stopRecording : startRecording}>{recording ? "Stop" : "Start"}</button>
+    <button disabled={isLoading} onClick={recording ? stopRecording : startRecording}>{recording ? "Stop" : "Start"}</button>
     <br />{text}
-    <Content text={text} />
+    <Content text={text} setLoading={setIsLoading} />
   </div>);
 };
 export default RecordButton;

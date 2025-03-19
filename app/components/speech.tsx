@@ -1,9 +1,9 @@
 import { useState, useEffect,useRef } from "react";
 
-export default function TextToSpeech({ text }:{text:String}) {
+export default function TextToSpeech({ text,setLoading }:{text:String,setLoading:Function}) {
 
   const [audioSrc, setAudioSrc] = useState("");
-  const [loading, setLoading] = useState(false);
+  
   const audioRef=useRef(null);
 
   const generateSpeech = async () => {
@@ -31,7 +31,7 @@ export default function TextToSpeech({ text }:{text:String}) {
   };
   useEffect(()=>{
     if (audioRef.current)
-    //@ts-ignore
+    //@ts-ignores
       audioRef.current.load();
 
   },[audioRef,audioSrc]);
