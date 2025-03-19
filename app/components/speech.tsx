@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect,useRef } from "react";
 
 export default function TextToSpeech({ text }:{text:String}) {
 
-  const [audioSrc, setAudioSrc] = useState(null);
+  const [audioSrc, setAudioSrc] = useState("");
   const [loading, setLoading] = useState(false);
+  const audioRef=useRef(null);
 
   const generateSpeech = async () => {
     if (!text) return;
@@ -21,12 +22,19 @@ export default function TextToSpeech({ text }:{text:String}) {
       const audioBlob = await response.blob();
       const audioURL = URL.createObjectURL(audioBlob);
       setAudioSrc(audioURL);
+      
       console.log("done");
     } catch (error) {
       console.error("Error generating speech:", error);
     }
     setLoading(false);
   };
+  useEffect(()=>{
+    if (audioRef.current)
+    //@ts-ignore
+      audioRef.current.load();
+
+  },[audioRef,audioSrc]);
   useEffect(() => {
 
     generateSpeech();
@@ -36,7 +44,7 @@ export default function TextToSpeech({ text }:{text:String}) {
     <div className="p-4">
 
       {audioSrc && (
-        <audio controls className="mt-4" autoPlay>
+        <audio controls className="mt-4" autoPlay ref={audioRef}>
           <source src={audioSrc} type="audio/mpeg" />
           Your browser does not support the audio element.
         </audio>

@@ -36,7 +36,7 @@ console.log(req.body);
         //res.setHeader("Content-Type", "audio/mpeg");
         //res.send(response.data);
         //res.headers.append("Content-Type", "audio/mpeg");
-        return new Response(response.data,{"headers":{"Content-Type":"audio/mpeg"}});
+        return new NextResponse(response.data, { headers: { "Content-Type": "audio/mpeg" } });
     } catch (error) {
         console.error("Error fetching audio:", error);
         //res.status(500).json({ error: "Failed to generate speech" });
