@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
-import {blobToBase64, createMediaStream} from "@/app/utils/audio";
+import {sendAudioToWhisper, createMedia, sendAudioToWhisperStream} from "@/app/utils/audio";
 
 export const useRecordVoice = () => {
   // State to hold the media recorder instance
@@ -61,11 +61,11 @@ export const useRecordVoice = () => {
     };
 
     // Event handler when recording stops
+    
     mediaRecorder.onstop = () => {
       // Creating a blob from accumulated audio chunks with WAV format
       const audioBlob = new Blob(chunks.current, { type: "audio/wav" });
-      blobToBase64(audioBlob, getText);
-
+    setText(sendAudioToWhisper(audioBlob));  
       // You can do something with the audioBlob, like sending it to a server or processing it further
     };
 

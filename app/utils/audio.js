@@ -1,4 +1,26 @@
 "use client";
+
+export async function sendAudioToWhisper(audioBlob) {
+  console.log("Starting...");
+  const formData = new FormData();
+  const audioFile = new File([audioBlob], "audio.wav", { type: "audio/wav" });
+
+  formData.append("file", audioFile);
+  formData.append("model", "whisper-1");
+  
+  const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`,
+    },
+    body: formData,
+  });
+
+  const result = await response.json();
+  console.log(result.text); // Transcribed text
+  return result.text;
+}
+
 const blobToBase64 = (blob, callback) => {
     const reader = new FileReader();
     reader.onload = function () {
