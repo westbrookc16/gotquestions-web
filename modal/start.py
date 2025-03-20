@@ -72,7 +72,7 @@ def loadData(forceUpload):
     print("done")
     
 
-    return vectorstore
+    
 
         
 @app.function(secrets=[modal.Secret.from_name("openai-secret"),modal.Secret.from_name("langsmith-secret")], volumes={"/vectorstore": vectorstore_volume},timeout=6000)
