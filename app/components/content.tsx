@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 //import Speech from "@/app/components/speech";
 import TextToSpeech from "@/app/components/speech";
-const Content = ({ text, setLoading }: { text: string, setLoading: Function }) => {
+const Content = ({ text, setLoading,isLoading }: { text: string, setLoading: Function,isLoading:boolean }) => {
     const [html, setHtml] = useState("");
     const [answer, setAnswer] = useState("");
     useEffect(() => {
@@ -24,6 +24,7 @@ const Content = ({ text, setLoading }: { text: string, setLoading: Function }) =
     return (
         <div>
             {text}<br/>
+            <div aria-live="polite" className="text-lg font-semibold">{isLoading ? "Loading..." : ""}</div>
             <div dangerouslySetInnerHTML={{ __html: html }} />
 
             <TextToSpeech text={answer ? answer : ""} setLoading={setLoading} />
