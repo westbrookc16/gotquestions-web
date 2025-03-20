@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
-import {sendAudioToWhisper, createMedia, sendAudioToWhisperStream} from "@/app/utils/audio";
+import { sendAudioToWhisper, createMedia, sendAudioToWhisperStream } from "@/app/utils/audio";
 
 export const useRecordVoice = () => {
   // State to hold the media recorder instance
@@ -8,7 +8,7 @@ export const useRecordVoice = () => {
 
   // State to track whether recording is currently in progress
   const [recording, setRecording] = useState(false);
-
+  const [recordButtonClicked, setRecordButtonClicked] = useState(false);
   // Ref to store audio chunks during recording
   const chunks = useRef([]);
   const [text, setText] = useState("");
@@ -25,6 +25,7 @@ export const useRecordVoice = () => {
       }).then((res) => res.json());
       const { text } = response;
       setText(text);
+
     } catch (error) {
       console.log(error);
     }
@@ -41,7 +42,7 @@ export const useRecordVoice = () => {
   // Function to stop the recording
   const stopRecording = () => {
     if (mediaRecorder) {
-      mediaRecorder.stop(); 
+      mediaRecorder.stop();
       setRecording(false);
     }
   };
@@ -61,11 +62,12 @@ export const useRecordVoice = () => {
     };
 
     // Event handler when recording stops
-    
+
     mediaRecorder.onstop = async () => {
       // Creating a blob from accumulated audio chunks with WAV format
       const audioBlob = new Blob(chunks.current, { type: "audio/wav" });
-    setText(await sendAudioToWhisper(audioBlob));  
+      setText(await sendAudioToWhisper(audioBlob));
+setRecordButtonClicked(true);
       // You can do something with the audioBlob, like sending it to a server or processing it further
     };
 
@@ -78,8 +80,9 @@ export const useRecordVoice = () => {
         .getUserMedia({ audio: true })
         .then(initialMediaRecorder);
     }
-  }, []); 
+  }, []);
 
-  return { recording, startRecording, stopRecording,text
- };
+  return {
+    recording, startRecording, stopRecording, text,recordButtonClicked,setRecordButtonClicked
+  };
 };

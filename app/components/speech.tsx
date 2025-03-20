@@ -1,14 +1,12 @@
-import { useState, useEffect,useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 
-export default function TextToSpeech({ text,setLoading }:{text:String,setLoading:Function}) {
-
+export default function TextToSpeech({ text, setLoading }: { text: String, setLoading: Function }) {
   const [audioSrc, setAudioSrc] = useState("");
-  
-  const audioRef=useRef(null);
+  const audioRef = useRef(null);
 
   const generateSpeech = async () => {
     if (!text) return;
-//alert(text);
+    //alert(text);
     setLoading(true);
     try {
       const response = await fetch("/api/textToSpeech", {
@@ -22,27 +20,26 @@ export default function TextToSpeech({ text,setLoading }:{text:String,setLoading
       const audioBlob = await response.blob();
       const audioURL = URL.createObjectURL(audioBlob);
       setAudioSrc(audioURL);
-      
+
       console.log("done");
     } catch (error) {
       console.error("Error generating speech:", error);
     }
     setLoading(false);
   };
-  useEffect(()=>{
-    if (audioRef.current)
-    //@ts-ignores
-      audioRef.current.load();
 
-  },[audioRef,audioSrc]);
   useEffect(() => {
+    if (audioRef.current)
+      // @ts-ignore
+      audioRef.current.load();
+  }, [audioSrc]); // Only depend on audioSrc
 
+  useEffect(() => {
     generateSpeech();
+  }, [text]); // Only call generateSpeech when text changes
 
-  }, [text]);
   return (
     <div className="p-4">
-
       {audioSrc && (
         <audio controls className="mt-4" autoPlay ref={audioRef}>
           <source src={audioSrc} type="audio/mpeg" />
