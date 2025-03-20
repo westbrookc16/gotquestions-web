@@ -23,6 +23,7 @@ const Content = ({ text, setLoading }: { text: string, setLoading: Function }) =
     }, [text]);
     return (
         <div>
+            {text}<br/>
             <div dangerouslySetInnerHTML={{ __html: html }} />
 
             <TextToSpeech text={answer ? answer : ""} setLoading={setLoading} />

@@ -108,7 +108,7 @@ def getDataAndAnswerQuestion(question: str,forceUpload:str):
     #for step in graph.stream({"messages": [{"role": "user", "content": question}], "context": ""},stream_mode="values"):
         #step["messages"][-1].pretty_print()
     # Return formatted results
-    sources_html = "".join(f'<a href="{doc.metadata["url"]}">{doc.metadata["question"]}</a><br>' for doc in finalAnswer["context"])
+    sources_html = "".join(f'<a href="{doc.metadata["url"]}" target="_blank>{doc.metadata["question"]}</a><br>' for doc in finalAnswer["context"])
     
     return {"content": finalAnswer["messages"][-1].content, "sources": sources_html}
 
