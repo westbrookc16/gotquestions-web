@@ -20,6 +20,7 @@ export async function POST(req: Request) {
     const file = formData.get("file");
 
     const data = await openai.audio.transcriptions.create({
+      //@ts-ignore
       file: file,
       model: "whisper-1",
     });
