@@ -15,6 +15,8 @@ export default function Home() {
           <RecordButton recording={recording} isLoading={isLoading} startRecording={startRecording} stopRecording={stopRecording} />
           <br />
           <Content text={text} setLoading={setIsLoading} isLoading={isLoading} />
+          <br />
+          If you are technical and wish to view the github repository, it is located <a href="https://github.com/westbrookc16/gotquestions-web">here.</a>
         </div>
       </main>
 
