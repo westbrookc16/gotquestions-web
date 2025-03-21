@@ -4,12 +4,12 @@ import RecordButton from "./recordbutton";
 import { useEffect } from "react";
 export default function AudioRecording({ isLoading, updateQuestion }) {
 
-    const { startRecording, stopRecording, recording, text, setText} = useRecordVoice();
-    useEffect(()=>{
-    if (text != ""){ updateQuestion(text);setText("");}
-    },[text]);
+    const { permissionRequested, startRecording, stopRecording, recording, text, setText } = useRecordVoice();
+    useEffect(() => {
+        if (text != "") { updateQuestion(text); setText(""); }
+    }, [text]);
     return (
-        <div><RecordButton recording={recording} isLoading={isLoading} startRecording={startRecording} stopRecording={stopRecording} /></div>
+        <div><RecordButton permissionRequested={permissionRequested} recording={recording} isLoading={isLoading} startRecording={startRecording} stopRecording={stopRecording} /></div>
 
     )
 }
