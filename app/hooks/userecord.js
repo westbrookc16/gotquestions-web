@@ -83,6 +83,6 @@ setRecordButtonClicked(true);
   }, []);
 
   return {
-    recording, startRecording, stopRecording, text,recordButtonClicked,setRecordButtonClicked
+    recording, startRecording, stopRecording, text,setText,recordButtonClicked,setRecordButtonClicked
   };
 };

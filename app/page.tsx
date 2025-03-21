@@ -88,7 +88,7 @@ export default function Home() {
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
         <div>
           To use this chat bot, first grant this page permission to use the microphone. Then click the Start button to start recording and ask a question about Christianity. When you're done click the button again and you will see the text of your question and then the answer. After that you will here the answer read aloud. Please note that this answer is read by an AI voice and not by a human. Seems obvious, but I have to put that disclaimore in to use the voices.<br />Data pulled from <a href="https://www.gotquestions.org/">GotQuestions.org</a>.<br />
-          <AudioRecording isLoading={isLoading} setTexts={updateQuestion} />
+          <AudioRecording isLoading={isLoading} updateQuestion={setQuestion} />
           <br />
           or<br />
           <Form {...form}>
