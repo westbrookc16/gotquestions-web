@@ -65,7 +65,7 @@ export const useRecordVoice = () => {
 
     mediaRecorder.onstop = async () => {
       // Creating a blob from accumulated audio chunks with WAV format
-      const audioBlob = new Blob(chunks.current, { type: "audio/wav" });
+      const audioBlob = new Blob(chunks.current, { type: "audio/webm" });
       setText(await sendAudioToWhisper(audioBlob));
 setRecordButtonClicked(true);
       // You can do something with the audioBlob, like sending it to a server or processing it further
