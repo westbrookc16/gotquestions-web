@@ -1,5 +1,8 @@
 "use client";
 import AudioRecording from "@/app/components/audio";
+import { track } from '@vercel/analytics';
+ 
+
 
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -55,7 +58,8 @@ export default function Home() {
   function onSubmit(values: z.infer<typeof formSchema>) {
     // Do something with the form values.
     // ✅ This will be type-safe and validated.
-    console.log(values)
+    console.log(values);
+    track("text");
     setQuestion(values["question"]);
     //values["question"] = "";
     form.reset();
