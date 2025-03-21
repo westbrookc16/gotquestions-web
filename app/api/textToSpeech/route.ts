@@ -19,7 +19,7 @@ console.log(req.body);
         const response = await axios.post(
             "https://api.openai.com/v1/audio/speech",
             {
-                model: "tts-1", // Choose model (use "tts-1-hd" for higher quality)
+                model: "gpt-4o-mini-tts", // Choose model (use "tts-1-hd" for higher quality)
                 input: text,
                 voice: "alloy", // Other voices: echo, fable, onyx, nova, shimmer
             },
