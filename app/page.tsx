@@ -58,6 +58,7 @@ export default function Home() {
     console.log(values)
     setQuestion(values["question"]);
     //values["question"] = "";
+    form.reset();
   }
 
   const [html, setHtml] = useState("");
