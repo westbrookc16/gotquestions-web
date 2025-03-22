@@ -53,7 +53,7 @@ export const useAudioRecorder = () => {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       return stream;
     } catch (err) {
-      console.error("Microphone permission denied or error:", err);
+      Sentry.captureException("Microphone permission denied or error:" + err);
       setStatus("error");
       return null;
     }
