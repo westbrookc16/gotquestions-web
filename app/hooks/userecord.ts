@@ -28,7 +28,7 @@ export const useAudioRecorder = () => {
       'audio/ogg;codecs=opus',
       'audio/wav'
     ];
-  
+
     for (const type of types) {
       if (MediaRecorder.isTypeSupported(type)) {
         Sentry.captureEvent({
@@ -43,11 +43,11 @@ export const useAudioRecorder = () => {
         return type;
       }
     }
-  
+
     Sentry.captureMessage("No supported MIME type found", "warning");
     return '';
   };
-  
+
   const requestMicrophone = async (): Promise<MediaStream | null> => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -64,8 +64,8 @@ export const useAudioRecorder = () => {
 
     const stream = await requestMicrophone();
     if (!stream) return;
-const mimeType=getSupportedMimeType();
-    const recorder = new MediaRecorder(stream, { mimeType:  mimeType});
+    const mimeType = getSupportedMimeType();
+    const recorder = new MediaRecorder(stream, { mimeType: mimeType });
     mediaRecorderRef.current = recorder;
     audioChunksRef.current = [];
 
@@ -76,7 +76,7 @@ const mimeType=getSupportedMimeType();
     };
 
     recorder.onstop = () => {
-      const audioBlob = new Blob(audioChunksRef.current, { type:  mimeType});
+      const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
       const url = URL.createObjectURL(audioBlob);
       setAudioBlob(audioBlob);
       setAudioURL(url);
@@ -84,11 +84,11 @@ const mimeType=getSupportedMimeType();
     };
 
     recorder.onerror = (err) => {
-      console.error("Recording error:", err);
+      Sentry.captureException("Recording error: " + err);
       setStatus("error");
     };
 
-    recorder.start();
+    recorder.start(1000);
     setStatus("recording");
   };
 
