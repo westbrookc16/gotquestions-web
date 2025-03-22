@@ -7,22 +7,22 @@ import { Button } from '@/components/ui/button';
 import { useState } from "react";
 import Content from "@/app/components/content";
 
-const RecordButton = ({ permissionRequested, isLoading, recording, startRecording, stopRecording, }: { permissionRequested: boolean, isLoading: boolean, recording: boolean, startRecording: Function, stopRecording: Function }) => {
-  const label = (permissionRequested:boolean, recording:boolean) => {
+const RecordButton = ({ permissionRequested, isLoading, recording, startRecording, stopRecording, }: { permissionRequested: boolean, isLoading: boolean, recording: string, startRecording: Function, stopRecording: Function }) => {
+  const label = (permissionRequested: boolean, recording: string) => {
     if (!permissionRequested) return "Grant Permission";
     else {
 
-      return recording ? "Stop" : "Start";
+      return (recording === "stopped" || recording === "idle") ? "Start" : "Stop";
     }
   }
-    return (<div>
-      <Button disabled={isLoading} onClick={(e) => {
-        if (recording) stopRecording(); else { startRecording(); track("audio"); }
+  return (<div>
+    <Button disabled={isLoading} onClick={(e) => {
+      if (recording === "recording") stopRecording(); else { startRecording(); track("audio"); }
 
 
-      }}>{label(permissionRequested, recording)}</Button>
+    }}>{label(permissionRequested, recording)}</Button>
 
 
-    </div>);
-  };
-  export default RecordButton;
+  </div>);
+};
+export default RecordButton;
