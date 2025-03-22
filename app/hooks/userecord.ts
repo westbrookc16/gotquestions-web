@@ -1,4 +1,5 @@
 "use client";
+import * as Sentry from "@sentry/nextjs";
 import { useEffect, useRef, useState } from "react";
 
 type RecorderStatus = "idle" | "recording" | "paused" | "stopped" | "error";
@@ -19,7 +20,34 @@ export const useAudioRecorder = () => {
       }
     };
   }, []);
-
+  const getSupportedMimeType = () => {
+    const types = [
+      'audio/webm',
+      'audio/webm;codecs=opus',
+      'audio/mp4',
+      'audio/ogg;codecs=opus',
+      'audio/wav'
+    ];
+  
+    for (const type of types) {
+      if (MediaRecorder.isTypeSupported(type)) {
+        Sentry.captureEvent({
+          level: 'info',
+          message: 'MIME type selected',
+          extra: {
+            mimeType: type,
+            userAgent: navigator.userAgent,
+            platform: navigator.platform,
+          }
+        });
+        return type;
+      }
+    }
+  
+    Sentry.captureMessage("No supported MIME type found", "warning");
+    return '';
+  };
+  
   const requestMicrophone = async (): Promise<MediaStream | null> => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -36,8 +64,8 @@ export const useAudioRecorder = () => {
 
     const stream = await requestMicrophone();
     if (!stream) return;
-
-    const recorder = new MediaRecorder(stream);
+const mimeType=getSupportedMimeType();
+    const recorder = new MediaRecorder(stream, { mimeType:  mimeType});
     mediaRecorderRef.current = recorder;
     audioChunksRef.current = [];
 
@@ -48,7 +76,7 @@ export const useAudioRecorder = () => {
     };
 
     recorder.onstop = () => {
-      const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder });
+      const audioBlob = new Blob(audioChunksRef.current, { type:  mimeType});
       const url = URL.createObjectURL(audioBlob);
       setAudioBlob(audioBlob);
       setAudioURL(url);
