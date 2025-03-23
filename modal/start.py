@@ -121,7 +121,10 @@ def retrieveInfoForQuery(query: str):
     print("retrieving... "+query)
     vectorstore_path = "/vectorstore"
     #vectorstore=loadData.remote("false")
-    vectorstore = Chroma(persist_directory=vectorstore_path, embedding_function=OpenAIEmbeddings(model="text-embedding-3-large"))
+    try:
+        vectorstore = Chroma(persist_directory=vectorstore_path, embedding_function=OpenAIEmbeddings(model="text-embedding-3-large"))
+    except Exception as e:
+        print("Error loading vectorstore",e)
     
     if isinstance(vectorstore, Chroma):  # Ensure it's properly loaded
         retrieved_docs = vectorstore.similarity_search(query, k=2)
