@@ -1,7 +1,7 @@
 "use client";
 import AudioRecording from "@/app/components/audio";
 import { track } from '@vercel/analytics';
- 
+
 
 
 import { Button } from "@/components/ui/button";
@@ -71,7 +71,7 @@ export default function Home() {
     //get data from api
     async function getData() {
       if (question === "") return;
-      setIsLoading(true);
+      //setIsLoading(true);
       const res = await fetch(`https://westbchris--rag-modal-deployment-getdataandanswerquestion.modal.run/?question=${encodeURIComponent(question)}&forceUpload=false`)
       const json = await res.json();
       console.log(json);
@@ -88,7 +88,7 @@ export default function Home() {
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
         <div>
           To use this chat bot, first grant this page permission to use the microphone and start the recording by clicking the start button. When you're done click the button again and you will see the text of your question and then the answer. After that you will here the answer read aloud. Please note that this answer is read by an AI voice and not by a human. Seems obvious, but I have to put that disclaimore in to use the voices.<br />Data pulled from <a href="https://www.gotquestions.org/">GotQuestions.org</a>.<br />
-          <AudioRecording isLoading={isLoading} updateQuestion={setQuestion} />
+          <AudioRecording isLoading={isLoading} updateQuestion={setQuestion} setIsLoading={setIsLoading} />
           <br />
           or<br />
           <Form {...form}>

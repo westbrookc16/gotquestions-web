@@ -1,9 +1,9 @@
 "use client";
 import { useAudioRecorder } from "@/app/hooks/userecord";
 import RecordButton from "./recordbutton";
-import { useEffect,useState } from "react";
+import { useEffect, useState } from "react";
 import { sendAudioToWhisper } from "@/app/utils/audio";
-export default function AudioRecording({ isLoading, updateQuestion }) {
+export default function AudioRecording({ isLoading, updateQuestion, setIsLoading }) {
     const { status,
         audioURL,
         audioBlob,
@@ -16,17 +16,17 @@ export default function AudioRecording({ isLoading, updateQuestion }) {
         if (text != "") { updateQuestion(text); setText(""); }
     }, [text]);
     useEffect(() => {
-        async function getData(){
-        if (audioBlob) {
-            const text=await sendAudioToWhisper(audioBlob);
-            setText(text);
+        async function getData() {
+            if (audioBlob) {
+                const text = await sendAudioToWhisper(audioBlob);
+                setText(text);
+            }
         }
-    }
-    getData();
+        getData();
     }, [audioBlob]);
-//})
-return (
-    <div><RecordButton permissionRequested={true} recording={status} isLoading={isLoading} startRecording={startRecording} stopRecording={stopRecording} /></div>
+    //})
+    return (
+        <div><RecordButton permissionRequested={true} recording={status} isLoading={isLoading} startRecording={startRecording} stopRecording={() => { setIsLoading(true); stopRecording(); }} /></div>
 
-)
+    )
 }
