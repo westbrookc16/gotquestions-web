@@ -31,7 +31,7 @@ export const useAudioRecorder = () => {
 
     for (const type of types) {
       if (MediaRecorder.isTypeSupported(type)) {
-        Sentry.captureEvent({
+        /*Sentry.captureEvent({
           level: 'info',
           message: 'MIME type selected',
           extra: {
@@ -39,12 +39,12 @@ export const useAudioRecorder = () => {
             userAgent: navigator.userAgent,
             platform: navigator.platform,
           }
-        });
+        });*/
         return type;
       }
     }
 
-    Sentry.captureMessage("No supported MIME type found", "warning");
+    //Sentry.captureMessage("No supported MIME type found", "warning");
     return '';
   };
 
