@@ -22,7 +22,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Spinner } from "./components/spinner";
+import { LoadingOverlay } from "./components/spinner";
 
 
 
@@ -113,7 +113,7 @@ export default function Home() {
               <Button type="submit">Submit</Button>
             </form>
           </Form>
-          {isLoading && <Spinner />}
+          {isLoading && <LoadingOverlay />}
           <Content text={question} html={html} answer={answer} setLoading={setIsLoading} isLoading={isLoading} />
           <br />
           If you are technical and wish to view the github repository, it is located <a href="https://github.com/westbrookc16/gotquestions-web">here.</a>
