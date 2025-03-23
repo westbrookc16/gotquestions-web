@@ -22,6 +22,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Spinner } from "./components/spinner";
 
 
 
@@ -59,6 +60,7 @@ export default function Home() {
     // Do something with the form values.
     // ✅ This will be type-safe and validated.
     console.log(values);
+    if (isLoading) return;
     track("text");
     setIsLoading(true);
     setQuestion(values["question"]);
@@ -108,10 +110,10 @@ export default function Home() {
                   </FormItem>
                 )}
               />
-              <Button disabled={isLoading} type="submit">Submit</Button>
+              <Button type="submit">Submit</Button>
             </form>
           </Form>
-
+          {isLoading && <Spinner />}
           <Content text={question} html={html} answer={answer} setLoading={setIsLoading} isLoading={isLoading} />
           <br />
           If you are technical and wish to view the github repository, it is located <a href="https://github.com/westbrookc16/gotquestions-web">here.</a>

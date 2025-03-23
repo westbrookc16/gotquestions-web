@@ -16,7 +16,8 @@ const RecordButton = ({ permissionRequested, isLoading, recording, startRecordin
     }
   }
   return (<div>
-    <Button disabled={isLoading} onClick={(e) => {
+    <Button onClick={(e) => {
+      if (isLoading) return;
       if (recording === "recording") stopRecording(); else { startRecording(); track("audio"); }
 
 
