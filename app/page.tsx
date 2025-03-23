@@ -60,6 +60,7 @@ export default function Home() {
     // ✅ This will be type-safe and validated.
     console.log(values);
     track("text");
+    setIsLoading(true);
     setQuestion(values["question"]);
     //values["question"] = "";
     form.reset();
