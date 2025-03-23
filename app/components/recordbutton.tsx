@@ -20,7 +20,7 @@ const RecordButton = ({ permissionRequested, isLoading, recording, startRecordin
       if (recording === "recording") stopRecording(); else { startRecording(); track("audio"); }
 
 
-    }}>{label(permissionRequested, recording)}</Button>
+    }}><span aria-live="polite">{label(permissionRequested, recording)}</span></Button>
 
 
   </div>);
