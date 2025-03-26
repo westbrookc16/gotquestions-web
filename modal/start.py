@@ -1,6 +1,5 @@
-from langchain_openai import ChatOpenAI
+from langchain_openai import OpenAIEmbeddings
 from langchain_core.tools import tool
-    
 from langchain_core.messages import SystemMessage
 from langchain import hub
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -10,45 +9,25 @@ from langchain_chroma import Chroma
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough, RunnableMap
 from langchain_core.documents import Document
-from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
-from langchain_community.llms import HuggingFaceHub
+from langchain_huggingface import ChatHuggingFace
 from typing_extensions import List, TypedDict
-from langchain.chat_models import init_chat_model
-from langchain_openai import OpenAIEmbeddings
-import sys
 import modal
 import os
-from langchain.globals import set_verbose
 
-
-
-
-# Create an image with dependencies
+# Create image with dependencies
 image = modal.Image.debian_slim().pip_install(
     "openai", "langchain", "langchain_community", "langchain_core",
-    "langchain_huggingface", "langchain_openai", "langgraph", "langchain_chroma"
+    "langchain_huggingface", "langchain_openai", "langgraph", "langchain_chroma",
+    "transformers", "accelerate"
 )
 
-# Create Modal app
 app = modal.App("rag-modal-deployment", image=image)
 
-# Define image correctly
+vectorstore_volume = modal.Volume.from_name("gotquestions-storage", create_if_missing=True)
 
-
-    # Persistent storage
-vectorstore_volume = modal.Volume.from_name("gotquestions-storage",create_if_missing=True)
-
-# Define CSV processing function
-
-
-
-# Define RAG function
 class State(MessagesState):
-    context: List[Document]=[]
+    context: List[Document] = []
 
-    
-
-    
 @app.function(
     volumes={"/vectorstore": vectorstore_volume},
     secrets=[
@@ -58,7 +37,6 @@ class State(MessagesState):
     timeout=6000
 )
 def loadData(forceUpload):
-    #from langchain.vectorstores import Chroma
     from langchain.document_loaders import CSVLoader
     from langchain.text_splitter import RecursiveCharacterTextSplitter
     from langchain.embeddings import OpenAIEmbeddings
@@ -66,7 +44,6 @@ def loadData(forceUpload):
     vectorstore_path = "/vectorstore"
     csv_path = "/vectorstore/gotquestions.csv"
 
-    # Load CSV
     loader = CSVLoader(
         file_path=csv_path,
         encoding="utf8",
@@ -74,8 +51,6 @@ def loadData(forceUpload):
         metadata_columns=["url", "question"]
     )
     docs = loader.load()
-
-    # Split docs
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=500)
     splits = text_splitter.split_documents(docs)
 
@@ -93,13 +68,11 @@ def loadData(forceUpload):
             embedding_function=OpenAIEmbeddings(model="text-embedding-3-large")
         )
 
-        # Get existing URLs
         existing_urls = set()
         for doc in vectorstore.get()['metadatas']:
             if "url" in doc:
                 existing_urls.add(doc["url"])
 
-        # Filter new documents
         new_splits = [doc for doc in splits if doc.metadata.get("url") not in existing_urls]
         print(f"Found {len(new_splits)} new documents to upload.")
 
@@ -107,23 +80,21 @@ def loadData(forceUpload):
             vectorstore.add_documents(new_splits)
         else:
             print("No new documents to add.")
-
     print("done")
 
-        
-@app.function(secrets=[modal.Secret.from_name("openai-secret"),modal.Secret.from_name("langsmith-secret")], volumes={"/vectorstore": vectorstore_volume},timeout=6000)
+@app.function(
+    secrets=[
+        modal.Secret.from_name("openai-secret"),
+        modal.Secret.from_name("langsmith-secret")
+    ],
+    volumes={"/vectorstore": vectorstore_volume},
+    timeout=6000
+)
 @modal.fastapi_endpoint(docs=True)
-def getDataAndAnswerQuestion(question: str,forceUpload:str):
-    
-
-    # Set environment variables
-    #os.environ["OPENAI_API_KEY"] = modal.Secret().get("OPENAI_API_KEY")
-    #os.environ["HUGGINGFACEHUB_API_TOKEN"] = modal.Secret().get("HUGGINGFACEHUB_API_TOKEN")
-
-    # Load data
-    #loadData.remote(forceUpload)
+def getDataAndAnswerQuestion(question: str, forceUpload: str):
     from langgraph.graph import END
     from langgraph.prebuilt import ToolNode, tools_condition
+
     tools = ToolNode([retrieveInfoForQuery])
     graph_builder = StateGraph(State)
     graph_builder.add_node(query_or_respond)
@@ -132,48 +103,40 @@ def getDataAndAnswerQuestion(question: str,forceUpload:str):
 
     graph_builder.set_entry_point("query_or_respond")
     graph_builder.add_conditional_edges(
-    "query_or_respond",
-    tools_condition,
-    {END: END, "tools": "tools"},
-)
+        "query_or_respond", tools_condition, {END: END, "tools": "tools"}
+    )
     graph_builder.add_edge("tools", "generate")
     graph_builder.add_edge("generate", END)
 
     graph = graph_builder.compile()
     finalAnswer = graph.invoke({"messages": [{"role": "user", "content": question}], "context": []})
-    #for step in graph.stream({"messages": [{"role": "user", "content": question}], "context": ""},stream_mode="values"):
-        #step["messages"][-1].pretty_print()
-    # Return formatted results
-    sources_html = "".join(f'<a href="{doc.metadata["url"]}" target="_blank">{doc.metadata["question"]}</a><br>' for doc in finalAnswer["context"])
-    
+
+    sources_html = "".join(
+        f'<a href="{doc.metadata["url"]}" target="_blank">{doc.metadata["question"]}</a><br>'
+        for doc in finalAnswer["context"]
+    )
+
     return {"content": finalAnswer["messages"][-1].content, "sources": sources_html}
 
-
 @tool(response_format="content_and_artifact")
-#@app.function()
 def retrieveInfoForQuery(query: str):
     """Retrieve information related to a query."""
-    
-    
     vectorstore_path = "/vectorstore"
-    #vectorstore=loadData.remote("false")
     try:
-        
-            vectorStore = Chroma(persist_directory=vectorstore_path, embedding_function=OpenAIEmbeddings(model="text-embedding-3-large"))
-        #vectorstore = Chroma(persist_directory=vectorstore_path, embedding_function=OpenAIEmbeddings(model="text-embedding-3-large"))
+        vectorStore = Chroma(
+            persist_directory=vectorstore_path,
+            embedding_function=OpenAIEmbeddings(model="text-embedding-3-large")
+        )
     except Exception as e:
-        print("Error loading vectorstore",e)
-    
-    if isinstance(vectorStore, Chroma):  # Ensure it's properly loaded
+        print("Error loading vectorstore", e)
+
+    if isinstance(vectorStore, Chroma):
         retrieved_docs = vectorStore.similarity_search(query, k=2)
     else:
         raise ValueError("Vectorstore did not initialize correctly.")
-    #retrieved_docs = vectorstore.similarity_search(query, k=2)
-    print(retrieved_docs)
-    
 
-    #print("retrieved... "+str(retrieved_docs))
-    
+    print(retrieved_docs)
+
     serialized = "\n\n".join(
         (f"Source: {doc.metadata}\n" f"Content: {doc.page_content}")
         for doc in retrieved_docs
@@ -182,11 +145,14 @@ def retrieveInfoForQuery(query: str):
 
 def query_or_respond(state: MessagesState):
     """Generate tool call for retrieval or respond."""
-    llm = ChatOpenAI(model="gpt-4o")
+    llm = ChatHuggingFace.from_model_id(
+        id="deepseek-ai/deepseek-llm-7b-chat",
+        task="text-generation",
+        model_kwargs={"temperature": 0.7, "max_new_tokens": 512}
+    )
     llm_with_tools = llm.bind_tools([retrieveInfoForQuery])
     response = llm_with_tools.invoke(state["messages"])
     print(response)
-    
     return {"messages": [response]}
 
 def generate(state: State):
@@ -202,8 +168,7 @@ def generate(state: State):
         "You are an assistant for question-answering tasks. "
         "Use the following pieces of retrieved context to answer "
         "the question. If you don't know the answer, say that you "
-        "don't know. Keep the answer concise." 
-        "\n\n"
+        "don't know. Keep the answer concise.\n\n"
         f"{docs_content}"
     )
 
@@ -213,10 +178,15 @@ def generate(state: State):
     ]
 
     prompt = [SystemMessage(system_message_content)] + conversation_messages
-    llm = init_chat_model("gpt-4o", model_provider="openai")
+
+    llm = ChatHuggingFace.from_model_id(
+        id="deepseek-ai/deepseek-llm-7b-chat",
+        task="text-generation",
+        model_kwargs={"temperature": 0.7, "max_new_tokens": 512}
+    )
     response = llm.invoke(prompt)
 
-    # Deduplicate documents by URL
+    # Deduplicate by URL
     seen_urls = set()
     unique_context = []
     for tool_message in tool_messages:
@@ -232,8 +202,3 @@ def generate(state: State):
 @app.local_entrypoint()
 def main():
     loadData.remote("false")
-
-
-
-     
-    
