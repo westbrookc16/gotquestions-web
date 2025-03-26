@@ -203,7 +203,6 @@ def generate(state: State):
         "Use the following pieces of retrieved context to answer "
         "the question. If you don't know the answer, say that you "
         "don't know. Keep the answer concise." 
-         
         "\n\n"
         f"{docs_content}"
     )
@@ -217,13 +216,18 @@ def generate(state: State):
     llm = init_chat_model("gpt-4o", model_provider="openai")
     response = llm.invoke(prompt)
 
-    context = []
+    # Deduplicate documents by URL
+    seen_urls = set()
+    unique_context = []
     for tool_message in tool_messages:
         if tool_message.artifact:
-            context.extend(tool_message.artifact)
+            for doc in tool_message.artifact:
+                url = doc.metadata.get("url")
+                if url and url not in seen_urls:
+                    seen_urls.add(url)
+                    unique_context.append(doc)
 
-    return {"messages": [response], "context": context}
-
+    return {"messages": [response], "context": unique_context}
 
 @app.local_entrypoint()
 def main():
