@@ -89,7 +89,7 @@ def loadData(forceUpload):
     ],
     volumes={"/vectorstore": vectorstore_volume},
     timeout=6000,
-    gpu="A10G",min_containers                                      =1
+    gpu="T4",min_containers                                      =1
 )
 @modal.fastapi_endpoint(docs=True)
 def getDataAndAnswerQuestion(question: str, forceUpload: str):
