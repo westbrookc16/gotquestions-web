@@ -45,34 +45,70 @@ vectorstore_volume = modal.Volume.from_name("gotquestions-storage",create_if_mis
 # Define RAG function
 class State(MessagesState):
     context: List[Document]=[]
-@app.function(volumes={"/vectorstore":vectorstore_volume},secrets=[modal.Secret.from_name("openai-secret"),modal.Secret.from_name("langsmith-secret")],timeout=6000)
+
+    
+
+    
+@app.function(
+    volumes={"/vectorstore": vectorstore_volume},
+    secrets=[
+        modal.Secret.from_name("openai-secret"),
+        modal.Secret.from_name("langsmith-secret")
+    ],
+    timeout=6000
+)
 def loadData(forceUpload):
-    # Load or create vectorstore
+    #from langchain.vectorstores import Chroma
+    from langchain.document_loaders import CSVLoader
+    from langchain.text_splitter import RecursiveCharacterTextSplitter
+    from langchain.embeddings import OpenAIEmbeddings
+
     vectorstore_path = "/vectorstore"
+    csv_path = "/vectorstore/gotquestions.csv"
+
+    # Load CSV
+    loader = CSVLoader(
+        file_path=csv_path,
+        encoding="utf8",
+        csv_args={'delimiter': ',', 'quotechar': '"'},
+        metadata_columns=["url", "question"]
+    )
+    docs = loader.load()
+
+    # Split docs
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=500)
+    splits = text_splitter.split_documents(docs)
+
     if forceUpload == "true":
-        print("Created new vector store.")
-
-        # Load CSV
-        loader = CSVLoader(file_path="/vectorstore/gotquestions.csv", encoding="utf8", csv_args={'delimiter': ',', 'quotechar': '"'}, metadata_columns=["url", "question"])
-        docs = loader.load()  
-
-        # Split Documents
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=500)
-        splits = text_splitter.split_documents(docs)
-
-        # Create Vector Store
+        print("Force upload: creating new vector store.")
         vectorstore = Chroma.from_documents(
-            documents=splits, 
+            documents=splits,
             embedding=OpenAIEmbeddings(model="text-embedding-3-large"),
             persist_directory=vectorstore_path
         )
     else:
-        print("Loaded existing vector store.")
-        vectorstore = Chroma(persist_directory=vectorstore_path, embedding_function=OpenAIEmbeddings(model="text-embedding-3-large"))
-    print("done")
-    
+        print("Loading existing vector store.")
+        vectorstore = Chroma(
+            persist_directory=vectorstore_path,
+            embedding_function=OpenAIEmbeddings(model="text-embedding-3-large")
+        )
 
-    
+        # Get existing URLs
+        existing_urls = set()
+        for doc in vectorstore.get()['metadatas']:
+            if "url" in doc:
+                existing_urls.add(doc["url"])
+
+        # Filter new documents
+        new_splits = [doc for doc in splits if doc.metadata.get("url") not in existing_urls]
+        print(f"Found {len(new_splits)} new documents to upload.")
+
+        if new_splits:
+            vectorstore.add_documents(new_splits)
+        else:
+            print("No new documents to add.")
+
+    print("done")
 
         
 @app.function(secrets=[modal.Secret.from_name("openai-secret"),modal.Secret.from_name("langsmith-secret")], volumes={"/vectorstore": vectorstore_volume},timeout=6000)
@@ -189,8 +225,9 @@ def generate(state: State):
     return {"messages": [response], "context": context}
 
 
-#@app.local_entrypoint()
-#def main():
+@app.local_entrypoint()
+def main():
+    loadData.remote("false")
 
 
 
