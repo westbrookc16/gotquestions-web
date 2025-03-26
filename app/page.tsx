@@ -75,7 +75,7 @@ export default function Home() {
     async function getData() {
       if (question === "") return;
       //setIsLoading(true);
-      const res = await fetch(`https://westbchris--rag-modal-deployment-getdataandanswerquestion.modal.run/?question=${encodeURIComponent(question)}&forceUpload=false`)
+      const res = await fetch(`https://westbchris--rag-deepseek-gpu-getdataandanswerquestion.modal.run/?question=${encodeURIComponent(question)}&forceUpload=false`)
       const json = await res.json();
       console.log(json);
 
