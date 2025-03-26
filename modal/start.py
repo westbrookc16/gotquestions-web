@@ -146,7 +146,7 @@ def retrieveInfoForQuery(query: str):
 def query_or_respond(state: MessagesState):
     """Generate tool call for retrieval or respond."""
     llm = ChatHuggingFace.from_model_id(
-        id="deepseek-ai/deepseek-coder-6.7b-instruct",
+        id="deepseek-ai/deepseek-llm-7b-chat",
         task="text-generation",
         model_kwargs={"temperature": 0.7, "max_new_tokens": 512}
     )
@@ -180,7 +180,7 @@ def generate(state: State):
     prompt = [SystemMessage(system_message_content)] + conversation_messages
 
     llm = ChatHuggingFace.from_model_id(
-        id="deepseek-ai/deepseek-coder-6.7b-instruct",
+        id="deepseek-ai/deepseek-llm-7b-chat",
         task="text-generation",
         model_kwargs={"temperature": 0.7, "max_new_tokens": 512}
     )
