@@ -14,14 +14,14 @@ from typing_extensions import List, TypedDict
 import modal
 import os
 
-# Create image with dependencies
+# Create image with GPU and dependencies
 image = modal.Image.debian_slim().pip_install(
     "openai", "langchain", "langchain_community", "langchain_core",
     "langchain_huggingface", "langchain_openai", "langgraph", "langchain_chroma",
-    "transformers", "accelerate"
-)
+    "transformers", "accelerate", "torch")
 
-app = modal.App("rag-modal-deployment", image=image)
+
+app = modal.App("rag-deepseek-gpu", image=image)
 
 vectorstore_volume = modal.Volume.from_name("gotquestions-storage", create_if_missing=True)
 
@@ -88,7 +88,8 @@ def loadData(forceUpload):
         modal.Secret.from_name("langsmith-secret")
     ],
     volumes={"/vectorstore": vectorstore_volume},
-    timeout=6000
+    timeout=6000,
+    gpu="A10G",min_containers                                      =1
 )
 @modal.fastapi_endpoint(docs=True)
 def getDataAndAnswerQuestion(question: str, forceUpload: str):
@@ -136,7 +137,6 @@ def retrieveInfoForQuery(query: str):
         raise ValueError("Vectorstore did not initialize correctly.")
 
     print(retrieved_docs)
-
     serialized = "\n\n".join(
         (f"Source: {doc.metadata}\n" f"Content: {doc.page_content}")
         for doc in retrieved_docs
@@ -146,7 +146,7 @@ def retrieveInfoForQuery(query: str):
 def query_or_respond(state: MessagesState):
     """Generate tool call for retrieval or respond."""
     llm = ChatHuggingFace.from_model_id(
-        id="deepseek-ai/deepseek-llm-7b-chat",
+        id="deepseek-ai/deepseek-coder-6.7b-instruct",
         task="text-generation",
         model_kwargs={"temperature": 0.7, "max_new_tokens": 512}
     )
@@ -180,13 +180,12 @@ def generate(state: State):
     prompt = [SystemMessage(system_message_content)] + conversation_messages
 
     llm = ChatHuggingFace.from_model_id(
-        id="deepseek-ai/deepseek-llm-7b-chat",
+        id="deepseek-ai/deepseek-coder-6.7b-instruct",
         task="text-generation",
         model_kwargs={"temperature": 0.7, "max_new_tokens": 512}
     )
     response = llm.invoke(prompt)
 
-    # Deduplicate by URL
     seen_urls = set()
     unique_context = []
     for tool_message in tool_messages:
