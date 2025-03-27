@@ -1,4 +1,4 @@
-export const runtime = 'nodejs';
+//export const runtime = 'nodejs';
 import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   const { text } = await req.json();
