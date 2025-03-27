@@ -231,13 +231,17 @@ def getDataAndAnswerQuestion(question: str, forceUpload: str):
 def getSources(question: str):
     retrieved_docs = query_vectorstore.remote(question)
 
-    sources_html = "".join(
-        f'<a href="{doc.metadata["url"]}" target="_blank">{doc.metadata["question"]}</a><br>'
-        for doc in retrieved_docs
-    )
+    seen_urls = set()
+    sources_html = ""
+
+    for doc in retrieved_docs:
+        url = doc.metadata.get("url")
+        question_text = doc.metadata.get("question", "")
+        if url and url not in seen_urls:
+            seen_urls.add(url)
+            sources_html += f'<a href="{url}" target="_blank">{question_text}</a><br>'
 
     return {"sources": sources_html}
-
 
 @app.function(volumes={"/vectorstore": vectorstore_volume},secrets=[modal.Secret.from_name("openai-secret"), modal.Secret.from_name("langsmith-secret")],timeout=6000)
 def query_vectorstore(query: str):
