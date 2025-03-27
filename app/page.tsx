@@ -76,7 +76,7 @@ export default function Home() {
       if (question === "") return;
       //setIsLoading(true);
       setHtml("");
-      const res = await fetch(`/api/ask`, {
+      const res = await fetch(`https://westbchris--rag-deepseek-gpu-streamanswer.modal.run`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
