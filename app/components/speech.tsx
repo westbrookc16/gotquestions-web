@@ -9,11 +9,22 @@ export default function TextToSpeech({ text, setLoading }: { text: String, setLo
     //alert(text);
     setLoading(true);
     try {
-      const response = await fetch("/api/textToSpeech", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-      });
+      const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
+    const response = await fetch("https://api.openai.com/v1/audio/speech", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "tts-1",
+        input: text,
+        voice: "alloy",
+      }),
+    });
+
+    
+    
 
       if (!response.ok) throw new Error("Failed to generate audio");
 
