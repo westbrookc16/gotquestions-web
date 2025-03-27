@@ -1,3 +1,4 @@
+import time
 from langchain_openai import OpenAIEmbeddings
 from langchain_core.messages import SystemMessage
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -22,7 +23,7 @@ vectorstore_volume = modal.Volume.from_name("gotquestions-storage", create_if_mi
 hf_cache = modal.Volume.from_name("hf-cache", create_if_missing=True)
 # At the top of your file
 LLM_PIPELINE = None  # Global cache for current container
-
+#@app.function(secrets=[modal.Secret.from_name("huggingface-secret")])
 def get_pipeline():
     global LLM_PIPELINE
     if LLM_PIPELINE is None:
@@ -41,9 +42,12 @@ def get_pipeline():
         hf_pipeline = pipeline(
             "text-generation",
             model="deepseek-ai/deepseek-llm-7b-chat",
+            #model="meta-llama/Llama-2-7b-chat-hf",
+            #model="meta-llama/Llama-3.3-70B-Instruct",
             device=0,
             temperature=0.7,
             max_new_tokens=512
+            
         )
         LLM_PIPELINE = HuggingFacePipeline(pipeline=hf_pipeline)
         print("Model loaded successfully.")
@@ -70,6 +74,8 @@ def build_pipeline():
     hf_pipeline = pipeline(
         "text-generation",
         model="deepseek-ai/deepseek-llm-7b-chat",
+        #model="meta-llama/Llama-2-7b-chat-hf",
+        #model="meta-llama/Llama-3.3-70B-Instruct",
         device=0,
         temperature=0.7,
         max_new_tokens=512
@@ -98,6 +104,51 @@ def loadData(forceUpload):
         if new_splits:
             vectorstore.add_documents(new_splits)
 
+from fastapi.responses import StreamingResponse
+from fastapi import Request
+
+@app.function(
+    secrets=[modal.Secret.from_name("openai-secret"), modal.Secret.from_name("langsmith-secret")],
+    volumes={"/vectorstore": vectorstore_volume, "/volumes/hf-cache": hf_cache},
+    timeout=6000,
+    gpu="A100"
+)
+@modal.fastapi_endpoint(method="post",  docs=True)
+async def streamAnswer(request: Request):
+    os.environ["HF_HOME"] = "/volumes/hf-cache"
+    body = await request.json()
+    question = body["question"]
+
+    from langchain_openai import ChatOpenAI
+
+    llm = ChatOpenAI(
+    model="deepseek-ai/deepseek-llm-7b-chat",
+    openai_api_base="https://westbchris--vllm-deepseek-serve.modal.run/v1",
+    openai_api_key="not-needed",  # required by LangChain, but vLLM doesn't check
+    temperature=0.7
+)
+
+    retrieved_docs = query_vectorstore.remote(question)
+
+    docs_content = "\n\n".join(doc.page_content for doc in retrieved_docs)
+    system_prompt = (
+        "You are an assistant for question-answering tasks. "
+        "Use the following context to answer the question. "
+        "If you don't know the answer, say so. Keep it concise.\n\n"
+        f"{docs_content}"
+    )
+
+    user_message = question
+    prompt = f"{system_prompt}\n\nUser: {user_message}\nAssistant:"
+
+    def generate_stream():
+        response = llm.invoke(prompt)
+        text = response if isinstance(response, str) else response.content
+        for i in range(0, len(text), 20):
+            yield text[i:i+20]
+            time.sleep(0.03)
+    return StreamingResponse(generate_stream(), media_type="text/plain")
+
 @app.function(
     secrets=[modal.Secret.from_name("openai-secret"), modal.Secret.from_name("langsmith-secret")],
     volumes={"/vectorstore": vectorstore_volume, "/volumes/hf-cache": hf_cache},
@@ -109,7 +160,15 @@ def getDataAndAnswerQuestion(question: str, forceUpload: str):
     try:
         os.environ["HF_HOME"] = "/volumes/hf-cache"
 
-        llm = get_pipeline()
+        from langchain_openai import ChatOpenAI
+
+        llm = ChatOpenAI(
+    model="deepseek-ai/deepseek-llm-7b-chat",
+    openai_api_base="https://westbchris--vllm-deepseek-serve.modal.run/v1",
+    openai_api_key="not-needed",  # required by LangChain, but vLLM doesn't check
+        temperature=0.7
+    )
+
         
         retrieved_docs = query_vectorstore.remote(question)
         #return {"content":"OK","sources":""}
@@ -178,7 +237,9 @@ def generate(state: State):
     prompt = f"{system_message_content}\n\nUser: {user_message}\nAssistant:"
 
     response = state["llm"].invoke(prompt)
-    text = response.strip()
+    print("Response type:", type(response))
+    print("Response content:", response)
+    text = response.content.strip()
 
     # Just return what's after the "Assistant:" prefix
     if "Assistant:" in text:

@@ -75,12 +75,31 @@ export default function Home() {
     async function getData() {
       if (question === "") return;
       //setIsLoading(true);
-      const res = await fetch(`https://westbchris--rag-deepseek-gpu-getdataandanswerquestion.modal.run/?question=${encodeURIComponent(question)}&forceUpload=false`)
-      const json = await res.json();
-      console.log(json);
+      const res = await fetch(`/api/ask`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ question }),
+      });
+      if (!res.body) {
+        setIsLoading(false);
+        throw new Error("No response body");
+      }
+  
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+  
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value);
+        setHtml((prev) => prev + chunk);
+      }
 
-      setHtml(json.content + "<br/>" + "Sources:<br/>" + json.sources);
-      setAnswer(json.content);
+
+      //setHtml(json.content + "<br/>" + "Sources:<br/>" + json.sources);
+      //setAnswer(json.content);
     }
 
     getData();
