@@ -24,7 +24,7 @@ def serve():
     import subprocess
     subprocess.run([
         "python3", "-m", "vllm.entrypoints.openai.api_server",
-        "--model", "deepseek-ai/deepseek-llm-7b-chat",
+        "--model", "mistralai/Mistral-7B-Instruct-v0.2",
         "--tokenizer", "deepseek-ai/deepseek-llm-7b-chat",
         "--tensor-parallel-size", "1",
         "--port", "8000",

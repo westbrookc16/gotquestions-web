@@ -107,53 +107,80 @@ def loadData(forceUpload):
 from fastapi.responses import StreamingResponse
 from fastapi import Request
 
+from fastapi.responses import StreamingResponse
+from fastapi import Request
+import asyncio
+from langchain.callbacks.base import AsyncCallbackHandler
+from langchain_core.messages import HumanMessage
+
 @app.function(
     secrets=[modal.Secret.from_name("openai-secret"), modal.Secret.from_name("langsmith-secret")],
     volumes={"/vectorstore": vectorstore_volume, "/volumes/hf-cache": hf_cache},
     timeout=6000,
-    gpu="A100"
+    
 )
-@modal.fastapi_endpoint(method="post",  docs=True)
+@modal.fastapi_endpoint(method="post", docs=True)
 async def streamAnswer(request: Request):
     os.environ["HF_HOME"] = "/volumes/hf-cache"
+    from langchain_openai import ChatOpenAI
+
     body = await request.json()
     question = body["question"]
 
-    from langchain_openai import ChatOpenAI
-
-    llm = ChatOpenAI(
-    model="deepseek-ai/deepseek-llm-7b-chat",
-    openai_api_base="https://westbchris--vllm-deepseek-serve.modal.run/v1",
-    openai_api_key="not-needed",  # required by LangChain, but vLLM doesn't check
-    temperature=0.7
-)
-
+    # Vector search
     retrieved_docs = query_vectorstore.remote(question)
+    context = "\n\n".join(doc.page_content for doc in retrieved_docs)
 
-    docs_content = "\n\n".join(doc.page_content for doc in retrieved_docs)
+    # Prompt
     system_prompt = (
         "You are an assistant for question-answering tasks. "
         "Use the following context to answer the question. "
         "If you don't know the answer, say so. Keep it concise.\n\n"
-        f"{docs_content}"
+        f"{context}"
+    )
+    prompt = f"{system_prompt}\n\nUser: {question}\nAssistant:"
+
+    # Streaming callback handler
+    class TokenStreamer(AsyncCallbackHandler):
+        def __init__(self):
+            self.queue = asyncio.Queue()
+
+        async def on_llm_new_token(self, token: str, **kwargs):
+            await self.queue.put(token)
+
+        async def on_llm_end(self, *args, **kwargs):
+            await self.queue.put(None)
+
+        async def generator(self):
+            while True:
+                token = await self.queue.get()
+                if token is None:
+                    break
+                yield token
+
+    streamer = TokenStreamer()
+
+    # Set up streaming model
+    llm = ChatOpenAI(
+        model="deepseek-ai/deepseek-llm-7b-chat",
+        openai_api_base="https://westbchris--vllm-deepseek-serve.modal.run/v1",
+        openai_api_key="not-needed",
+        temperature=0.7,
+        streaming=True,
+        callbacks=[streamer],
     )
 
-    user_message = question
-    prompt = f"{system_prompt}\n\nUser: {user_message}\nAssistant:"
+    # Fire off the generation in the background
+    asyncio.create_task(llm.ainvoke(prompt))
 
-    def generate_stream():
-        response = llm.invoke(prompt)
-        text = response if isinstance(response, str) else response.content
-        for i in range(0, len(text), 20):
-            yield text[i:i+20]
-            time.sleep(0.03)
-    return StreamingResponse(generate_stream(), media_type="text/plain")
+    # Stream response
+    return StreamingResponse(streamer.generator(), media_type="text/plain")
 
 @app.function(
     secrets=[modal.Secret.from_name("openai-secret"), modal.Secret.from_name("langsmith-secret")],
     volumes={"/vectorstore": vectorstore_volume, "/volumes/hf-cache": hf_cache},
     timeout=6000,
-    gpu="A100"
+    
 )
 @modal.fastapi_endpoint(docs=True)
 def getDataAndAnswerQuestion(question: str, forceUpload: str):
@@ -195,6 +222,23 @@ def getDataAndAnswerQuestion(question: str, forceUpload: str):
         print("Exception during generate():", e)
         traceback.print_exc()
         raise
+@app.function(
+    secrets=[modal.Secret.from_name("openai-secret")],
+    volumes={"/vectorstore": vectorstore_volume},
+    timeout=300,
+)
+@modal.fastapi_endpoint(docs=True)
+def getSources(question: str):
+    retrieved_docs = query_vectorstore.remote(question)
+
+    sources_html = "".join(
+        f'<a href="{doc.metadata["url"]}" target="_blank">{doc.metadata["question"]}</a><br>'
+        for doc in retrieved_docs
+    )
+
+    return {"sources": sources_html}
+
+
 @app.function(volumes={"/vectorstore": vectorstore_volume},secrets=[modal.Secret.from_name("openai-secret"), modal.Secret.from_name("langsmith-secret")],timeout=6000)
 def query_vectorstore(query: str):
     vectorstore = Chroma(
@@ -251,14 +295,14 @@ def main():
     preload_deepseek.remote()
     sanity_check_model.remote()
 
-@app.function(volumes={"/volumes/hf-cache": hf_cache}, gpu="A100", timeout=1200, retries=0)
+@app.function(volumes={"/volumes/hf-cache": hf_cache}, timeout=1200, retries=0)
 def preload_deepseek():
     os.environ["HF_HOME"] = "/volumes/hf-cache"
     from transformers import pipeline
     print("Preloading model...")
     _ = pipeline("text-generation", model="deepseek-ai/deepseek-llm-7b-chat", device=0)
     print("Model ready!")
-@app.function(gpu="A100", timeout=1200, volumes={"/volumes/hf-cache": hf_cache})
+@app.function( timeout=1200, volumes={"/volumes/hf-cache": hf_cache})
 def sanity_check_model():
     os.environ["HF_HOME"] = "/volumes/hf-cache"
     from transformers import pipeline

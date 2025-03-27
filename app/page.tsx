@@ -75,6 +75,7 @@ export default function Home() {
     async function getData() {
       if (question === "") return;
       //setIsLoading(true);
+      setHtml("");
       const res = await fetch(`/api/ask`, {
         method: "POST",
         headers: {
@@ -89,12 +90,18 @@ export default function Home() {
   
       const reader = res.body.getReader();
       const decoder = new TextDecoder("utf-8");
-  
+  let htmlString:string="";
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          
+          setIsLoading(false);
+          setAnswer(htmlString);
+          break;
+        }
         const chunk = decoder.decode(value);
         setHtml((prev) => prev + chunk);
+        htmlString+=chunk;
       }
 
 
@@ -104,8 +111,18 @@ export default function Home() {
 
     getData();
   }, [question]);
+const [sourcesHtml,setSourcesHtml]=useState("");
+useEffect(()=>{
+async function getData(){
+const res=await fetch(`https://westbchris--rag-deepseek-gpu-getsources.modal.run?question=${encodeURIComponent(question)}`);
+const json=await res.json();
+setSourcesHtml(json.sources);
 
-  return (
+}
+getData();
+
+},[question]);  
+return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
         <div>
@@ -133,7 +150,7 @@ export default function Home() {
             </form>
           </Form>
           {isLoading && <LoadingOverlay />}
-          <Content text={question} html={html} answer={answer} setLoading={setIsLoading} isLoading={isLoading} />
+          <Content text={question} html={html} answer={answer} setLoading={setIsLoading} isLoading={isLoading} sources={sourcesHtml} />
           <br />
           If you are technical and wish to view the github repository, it is located <a href="https://github.com/westbrookc16/gotquestions-web">here.</a>
         </div>
