@@ -31,56 +31,14 @@ def get_pipeline():
         import torch
         from langchain_huggingface import HuggingFacePipeline
 
-        os.environ["HF_HOME"] = "/volumes/hf-cache"
-
-        if not torch.cuda.is_available():
-            raise RuntimeError("CUDA not available")
-
-        torch.cuda.init()
-        print("Loading model into memory...")
-
-        hf_pipeline = pipeline(
-            "text-generation",
-            model="deepseek-ai/deepseek-llm-7b-chat",
-            #model="meta-llama/Llama-2-7b-chat-hf",
-            #model="meta-llama/Llama-3.3-70B-Instruct",
-            device=0,
-            temperature=0.7,
-            max_new_tokens=512
-            
-        )
-        LLM_PIPELINE = HuggingFacePipeline(pipeline=hf_pipeline)
-        print("Model loaded successfully.")
-    return LLM_PIPELINE
-
+        
 class State(TypedDict):
     messages: List[dict]
     context: List[Document]
     llm: any
 
-@lru_cache()
-def build_pipeline():
-    from transformers import pipeline
-    import torch
 
-    os.environ["HF_HOME"] = "/volumes/hf-cache"
 
-    if not torch.cuda.is_available():
-        raise RuntimeError("CUDA not available. Is GPU configured in Modal?")
-
-    torch.cuda.init()
-    print("Using device: cuda")
-
-    hf_pipeline = pipeline(
-        "text-generation",
-        model="deepseek-ai/deepseek-llm-7b-chat",
-        #model="meta-llama/Llama-2-7b-chat-hf",
-        #model="meta-llama/Llama-3.3-70B-Instruct",
-        device=0,
-        temperature=0.7,
-        max_new_tokens=512
-    )
-    return HuggingFacePipeline(pipeline=hf_pipeline)
 
 @app.function(
     volumes={"/vectorstore": vectorstore_volume},
@@ -162,8 +120,8 @@ async def streamAnswer(request: Request):
 
     # Set up streaming model
     llm = ChatOpenAI(
-        model="deepseek-ai/deepseek-llm-7b-chat",
-        openai_api_base="https://westbchris--vllm-deepseek-serve.modal.run/v1",
+        model="mistralai/Mistral-7B-Instruct-v0.3",
+        openai_api_base="https://westbchris--vllm-serve.modal.run/v1",
         openai_api_key="not-needed",
         temperature=0.7,
         streaming=True,
@@ -190,7 +148,7 @@ def getDataAndAnswerQuestion(question: str, forceUpload: str):
         from langchain_openai import ChatOpenAI
 
         llm = ChatOpenAI(
-    model="deepseek-ai/deepseek-llm-7b-chat",
+    model="mistralai/Mistral-7B-Instruct-v0.3",
     openai_api_base="https://westbchris--vllm-deepseek-serve.modal.run/v1",
     openai_api_key="not-needed",  # required by LangChain, but vLLM doesn't check
         temperature=0.7

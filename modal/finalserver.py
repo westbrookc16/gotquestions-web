@@ -1,7 +1,7 @@
 # ---
 # pytest: false
 # ---
-
+import os
 # # Run OpenAI-compatible LLM inference with LLaMA 3.1-8B and vLLM
 
 # LLMs do more than just model language: they chat, they produce JSON and XML, they run code, and more.
@@ -60,7 +60,8 @@ vllm_image = (
 MODELS_DIR = "/deepseek/"
 #MODEL_NAME = "neuralmagic/Meta-Llama-3.1-8B-Instruct-quantized.w4a16"
 #MODEL_REVISION = "a7c09948d9a632c2c840722f519672cd94af885d"
-MODEL_NAME="deepseek-ai/deepseek-llm-7b-chat"
+#MODEL_NAME="deepseek-ai/deepseek-llm-7b-chat"
+MODEL_NAME="mistralai/Mistral-7B-Instruct-v0.3"
 # Although vLLM will download weights on-demand, we want to cache them if possible. We'll use [Modal Volumes](https://modal.com/docs/guide/volumes),
 # which act as a "shared disk" that all Modal Functions can access, for our cache.
 
@@ -78,7 +79,7 @@ vllm_cache_vol = modal.Volume.from_name("vllm-cache", create_if_missing=True)
 # We wrap it in the [`@modal.web_server` decorator](https://modal.com/docs/guide/webhooks#non-asgi-web-servers)
 # to connect it to the Internet.
 
-app = modal.App("vllm-deepseek")
+app = modal.App("vllm")
 
 N_GPU = 1  # tip: for best results, first upgrade to more powerful GPUs, and only then increase GPU count
 API_KEY = "super-secret-key"  # api key, for auth. for production use, replace with a modal.Secret
@@ -93,6 +94,7 @@ VLLM_PORT = 8000
     gpu=f"H100:{N_GPU}",
     # how many requests can one replica handle? tune carefully!
     allow_concurrent_inputs=100,
+        secrets=[modal.Secret.from_name("huggingface-secret")],
     # how long should we stay up with no requests?
     scaledown_window=15 * MINUTES,
     volumes={
@@ -103,7 +105,8 @@ VLLM_PORT = 8000
 @modal.web_server(port=VLLM_PORT, startup_timeout=5 * MINUTES)
 def serve():
     import subprocess
-
+    hf_token = os.environ["HF_TOKEN"]
+    os.environ["HUGGINGFACE_TOKEN"]=hf_token
     cmd = [
         "vllm",
         "serve",
@@ -118,6 +121,8 @@ def serve():
         str(VLLM_PORT),
         #"--api-key",
         #API_KEY,
+        #"--huggingface-token", 
+        #hf_token,
     ]
 
     subprocess.Popen(" ".join(cmd), shell=True)
