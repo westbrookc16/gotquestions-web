@@ -1,4 +1,5 @@
 //export const runtime = 'nodejs';
+import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   const { text } = await req.json();
@@ -26,6 +27,7 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error("TTS failed:", error);
+    Sentry.captureException(error);
     return new NextResponse(
       JSON.stringify({ error: "Audio generation failed" }),
       { status: 500 }
