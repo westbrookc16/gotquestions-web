@@ -5,11 +5,17 @@ export async function sendAudioToWhisper(audioBlob) {
   
   const formData = new FormData();
   formData.append("audio", audioBlob, "audio.wav");
-
-const result =await fetch(`/api/speechToText`,{method:"POST",body:formData}).then((res) => res.json()).catch((err) => console.log(err));
-  
+  const arrayBuffer = await audioBlob.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+  const response = await fetch("https://westbchris--speech-api-transcribe-audio.modal.run", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/octet-stream", // Important!
+    },
+    body: bytes,
+  });
 //console.log(result.text); // Transcribed text
-  return result.text;
+  return response.text();
 }
 
 const blobToBase64 = (blob, callback) => {
