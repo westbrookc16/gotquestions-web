@@ -87,14 +87,14 @@ export default function Home() {
         setIsLoading(false);
         throw new Error("No response body");
       }
-  
+
       const reader = res.body.getReader();
       const decoder = new TextDecoder("utf-8");
-  let htmlString:string="";
+      let htmlString: string = "";
       while (true) {
         const { done, value } = await reader.read();
         if (done) {
-          
+
           setIsLoading(false);
           setAnswer(htmlString);
           break;
@@ -104,7 +104,7 @@ export default function Home() {
           setIsLoading(false);
           return prev + chunk;
         });
-        htmlString+=chunk;
+        htmlString += chunk;
       }
 
 
@@ -114,18 +114,18 @@ export default function Home() {
 
     getData();
   }, [question]);
-const [sourcesHtml,setSourcesHtml]=useState("");
-useEffect(()=>{
-async function getData(){
-const res=await fetch(`https://westbchris--rag-deepseek-gpu-getsources.modal.run?question=${encodeURIComponent(question)}`);
-const json=await res.json();
-setSourcesHtml(json.sources);
+  const [sourcesHtml, setSourcesHtml] = useState("");
+  useEffect(() => {
+    async function getData() {
+      const res = await fetch(`https://westbchris--rag-deepseek-gpu-getsources.modal.run?question=${encodeURIComponent(question)}`);
+      const json = await res.json();
+      setSourcesHtml(json.sources);
 
-}
-getData();
+    }
+    getData();
 
-},[question]);  
-return (
+  }, [question]);
+  return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
         <div>
