@@ -145,7 +145,12 @@ async def streamAnswer(request: Request):
     def query_or_respond(state: MessagesState):
         """Generate tool call for retrieval or respond."""
         llm_with_tools = llm.bind_tools([retrieve])
-        response = llm_with_tools.invoke(state["messages"])
+        try:
+            response = llm_with_tools.invoke(state["messages"])
+        except Exception as e:
+            print("Error in LLM invocation:", e)
+            # Handle the error appropriately, maybe return an error message or status
+            return {"error": "An error occurred during processing."}
         # MessagesState appends messages to state instead of overwriting
         return {"messages": [response]}
 
@@ -208,12 +213,13 @@ async def streamAnswer(request: Request):
         from fastapi.responses import StreamingResponse
 
         async def event_generator():
-            async for step in graph.stream(
+            print("started generator.")
+            for step in graph.stream(
                 {"messages": [{"role": "user", "content": question}]},
                 stream_mode="values"
             ):
                 # You might want to yield just the message content or chunk
-                
+                print("got step.")
                 for msg in step.get("messages", []):
                     if isinstance(msg, AIMessage):
                         yield f"data: {msg.content}\n\n"
@@ -222,12 +228,13 @@ async def streamAnswer(request: Request):
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Headers"] = "*"
         response.headers["Access-Control-Allow-Methods"] = "*"
+        return response
         
     except Exception as e:
         print("Error in graph execution:", e)
         # Handle the error appropriately, maybe return an error message or status
         return {"error": "An error occurred during processing."}
-    return response
+    
     #return StreamingResponse(event_generator(), media_type="text/event-stream")
 
     

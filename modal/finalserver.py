@@ -123,9 +123,11 @@ def serve():
         #API_KEY,
         #"--huggingface-token", 
         #hf_token,
+        "--enable-auto-tool-choice",
+        "--tool-call-parser","mistral"
     ]
 
-    subprocess.Popen(" ".join(cmd), shell=True)
+    subprocess.Popen( cmd)
 
 
 # ## Deploy the server
