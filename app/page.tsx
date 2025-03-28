@@ -100,7 +100,10 @@ export default function Home() {
           break;
         }
         const chunk = decoder.decode(value);
-        setHtml((prev) => prev + chunk);
+        setHtml((prev) => {
+          setIsLoading(false);
+          return prev + chunk;
+        });
         htmlString+=chunk;
       }
 

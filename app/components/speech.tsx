@@ -7,7 +7,7 @@ export default function TextToSpeech({ text, setLoading }: { text: String, setLo
   const generateSpeech = async () => {
     if (!text) return;
     //alert(text);
-    setLoading(true);
+    //setLoading(true);
     try {
       
       const response = await fetch("https://westbchris--speech-api-synthesize-speech.modal.run", {
