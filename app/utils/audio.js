@@ -15,7 +15,7 @@ export async function sendAudioToWhisper(audioBlob) {
     body: bytes,
   });
 //console.log(result.text); // Transcribed text
-  return response.text();
+  return await response.text();
 }
 
 const blobToBase64 = (blob, callback) => {
