@@ -1,0 +1,56 @@
+import modal
+from fastapi import Request  # add this
+from modal import Image, app, fastapi_endpoint
+
+import openai
+import os
+import io
+
+# Modal setup
+image = Image.debian_slim().pip_install("openai","fastapi[standard]")
+app = modal.App(name="speech-api", image=image)
+
+from fastapi import Request
+from fastapi.responses import StreamingResponse
+import openai
+import io
+import os
+
+@app.function(secrets=[modal.Secret.from_name("openai-secret")])
+@fastapi_endpoint(method="POST")
+async def synthesize_speech(request: Request):
+    data = await request.json()
+    text = data.get("text", "")
+
+    if not text:
+        return StreamingResponse(io.BytesIO(b""), media_type="text/plain", status_code=400)
+
+    openai.api_key = os.environ["OPENAI_API_KEY"]
+
+    response = openai.audio.speech.create(
+        model="tts-1",
+        voice="nova",
+        input=text,
+    )
+
+    return StreamingResponse(
+        io.BytesIO(response.content),
+        media_type="audio/mpeg"
+    )
+
+
+
+@app.function(secrets=[modal.Secret.from_name("openai-secret")])
+@fastapi_endpoint(method="POST")
+async def transcribe_audio(request:Request) -> str:
+    openai.api_key = os.environ["OPENAI_API_KEY"]
+    data = await request.body()  # 🔥 this gets raw bytes
+    audio_file = ("audio.wav", io.BytesIO(data), "audio/wav")
+
+    transcript = openai.audio.transcriptions.create(
+        model="whisper-1",
+        file=audio_file,
+        response_format="text",
+    )
+
+    return transcript.strip().strip('"')  # Remove extra quotes if present

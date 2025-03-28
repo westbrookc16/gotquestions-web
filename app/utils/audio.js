@@ -3,21 +3,12 @@ import OpenAI from "openai";
 export async function sendAudioToWhisper(audioBlob) {
   console.log("Starting...");
   
-  const audioFile = new File([audioBlob], "audio.wav", { type: "audio/wav" });
+  const formData = new FormData();
+  formData.append("audio", audioBlob, "audio.wav");
 
-
+const result =await fetch(`/api/speechToText`,{method:"POST",body:formData}).then((res) => res.json()).catch((err) => console.log(err));
   
-const openai = new OpenAI({
-  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,dangerouslyAllowBrowser:true
-});
-
-  const response = await openai.audio.transcriptions.create({
-    file: audioFile,
-    model: "whisper-1",
-  });
-
-  const result = response;
-  console.log(result.text); // Transcribed text
+//console.log(result.text); // Transcribed text
   return result.text;
 }
 

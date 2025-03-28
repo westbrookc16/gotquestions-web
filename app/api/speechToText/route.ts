@@ -1,36 +1,24 @@
-import Response from "next/server";
-import Request from "next";
-import { NextResponse } from "next/server";
-import fs from "fs";
-import * as dotenv from "dotenv";
-import OpenAI from "openai";
-
-
-
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
-
 export async function POST(req: Request) {
+  const formData = await req.formData();
+  const audioFile = formData.get("audio") as Blob;
+  //console.log("audioFile", audioFile);
+  const arrayBuffer = await audioFile.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
 
+  const response = await fetch("https://westbchris--speech-api-transcribe-audio.modal.run", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/octet-stream", // Important!
+    },
+    body: bytes,
+  });
+  /*const response = await fetch("https://westbchris--speech-api-transcribe-audio.modal.run", {
+    method: "POST",
+    body: audioFile,
+  });*/
 
-  try {
-    const formData = await req.formData();
-    const file = formData.get("file");
-
-    const data = await openai.audio.transcriptions.create({
-      //@ts-ignore
-      file: file,
-      model: "whisper-1",
-    });
-
-
-
-
-    return NextResponse.json(data);
-  } catch (error) {
-    console.error("Error processing audio:", error);
-    return NextResponse.error();
-  }
+  const text = await response.text();
+  return new Response(JSON.stringify({"text": text }), {
+    headers: { "Content-Type": "application/json" },
+  });
 }
