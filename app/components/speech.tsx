@@ -10,15 +10,11 @@ export default function TextToSpeech({ text, setLoading }: { text: String, setLo
     setLoading(true);
     try {
       
-    const response = await fetch("/api/textToSpeech", {
-      method: "POST",
-      headers: {
-        
-        "Content-Type": "application/json",
-      },
-      body:JSON.stringify({ text }), 
-    });
-
+      const response = await fetch("https://westbchris--speech-api-synthesize-speech.modal.run", {
+        method: "POST",
+        body: JSON.stringify({ text }),
+        headers: { "Content-Type": "application/json" },
+      });
     
     
 
