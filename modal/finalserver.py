@@ -91,7 +91,7 @@ VLLM_PORT = 8000
 
 @app.function(
     image=vllm_image,
-    gpu=f"H100:{N_GPU}",
+    gpu=f"A100:{N_GPU}",
     # how many requests can one replica handle? tune carefully!
     allow_concurrent_inputs=100,
         secrets=[modal.Secret.from_name("huggingface-secret")],
