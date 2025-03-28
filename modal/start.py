@@ -61,6 +61,9 @@ def loadData(forceUpload):
         new_splits = [doc for doc in splits if doc.metadata.get("url") not in existing_urls]
         if new_splits:
             vectorstore.add_documents(new_splits)
+            print(f"Added {len(new_splits)} new documents to the vectorstore.")
+        else:
+            print("No new documents to add.")
 
 from fastapi.responses import StreamingResponse
 from fastapi import Request
@@ -254,8 +257,9 @@ def generate(state: State):
     return {"messages": [text], "context": state["context"]}
 @app.local_entrypoint()
 def main():
-    preload_deepseek.remote()
-    sanity_check_model.remote()
+    #preload_deepseek.remote()
+    #sanity_check_model.remote()
+    loadData.remote("false")
 
 @app.function(volumes={"/volumes/hf-cache": hf_cache}, timeout=1200, retries=0)
 def preload_deepseek():
