@@ -76,35 +76,50 @@ export default function Home() {
       if (question === "") return;
       //setIsLoading(true);
       setHtml("");
-      const res = await fetch(`https://westbchris--rag-deepseek-gpu-streamanswer.modal.run`, {
+      let htmlString = "";
+      const response = await fetch("https://westbchris--rag-deepseek-gpu-streamanswer.modal.run", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ question }),
       });
-      if (!res.body) {
-        setIsLoading(false);
-        throw new Error("No response body");
+
+      // CORS check — important
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}`);
       }
 
-      const reader = res.body.getReader();
+      // 🔥 Stream the body chunk by chunk
+      const reader = response.body?.getReader();
       const decoder = new TextDecoder("utf-8");
-      let htmlString: string = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
 
-          setIsLoading(false);
-          setAnswer(htmlString);
-          break;
+      let buffer = "";
+
+      while (true) {
+        //@ts-ignore
+        const { done, value } = await reader.read();
+        if (done) { setAnswer(htmlString); break; }
+
+        const chunk = decoder.decode(value, { stream: true });
+        buffer += chunk;
+
+        // Parse SSE-style lines: "data: ...\n\n"
+        const lines = buffer.split("\n\n");
+
+        for (let i = 0; i < lines.length - 1; i++) {
+          const line = lines[i].trim();
+          if (line.startsWith("data:")) {
+            const content = line.replace(/^data:\s*/, "");
+            console.log("💬 Incoming chunk:", content);
+            // Do something with `content`, like append it to a chat window
+            setHtml((prev) => prev + content);
+            htmlString += content;
+          }
         }
-        const chunk = decoder.decode(value);
-        setHtml((prev) => {
-          setIsLoading(false);
-          return prev + chunk;
-        });
-        htmlString += chunk;
+
+        // Keep only the incomplete buffer at the end
+        buffer = lines[lines.length - 1];
       }
 
 

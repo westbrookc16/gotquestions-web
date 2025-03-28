@@ -1,5 +1,7 @@
 import time
+from langchain_core.messages import AIMessage
 from langchain_openai import OpenAIEmbeddings
+from langgraph.graph import MessagesState, StateGraph
 from langchain_core.messages import SystemMessage
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import CSVLoader
@@ -31,6 +33,18 @@ def get_pipeline():
         import torch
         from langchain_huggingface import HuggingFacePipeline
 
+from fastapi import Request, Response
+
+@modal.fastapi_endpoint(method="OPTIONS", docs=True)
+async def streamAnswer_options(request: Request):
+    print("options hit.")
+    
+    response = Response()
+    response.headers["Access-Control-Allow-Origin"] = "https://gotquestions-web.vercel.app"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+    return response
         
 class State(TypedDict):
     messages: List[dict]
@@ -73,6 +87,10 @@ from fastapi import Request
 import asyncio
 from langchain.callbacks.base import AsyncCallbackHandler
 from langchain_core.messages import HumanMessage
+from langchain_core.messages import SystemMessage
+
+
+
 
 @app.function(
     secrets=[modal.Secret.from_name("openai-secret"), modal.Secret.from_name("langsmith-secret")],
@@ -82,107 +100,142 @@ from langchain_core.messages import HumanMessage
 )
 @modal.fastapi_endpoint(method="post", docs=True)
 async def streamAnswer(request: Request):
+    from langgraph.prebuilt import ToolNode
+    import os
     os.environ["HF_HOME"] = "/volumes/hf-cache"
     from langchain_openai import ChatOpenAI
-
+    
     body = await request.json()
     question = body["question"]
 
-    # Vector search
-    retrieved_docs = query_vectorstore.remote(question)
-    context = "\n\n".join(doc.page_content for doc in retrieved_docs)
-
-    # Prompt
-    system_prompt = (
-        "You are an assistant for question-answering tasks. "
-        "Use the following context to answer the question. "
-        "If you don't know the answer, say so. Keep it concise.\n\n"
-        f"{context}"
-    )
-    prompt = f"{system_prompt}\n\nUser: {question}\nAssistant:"
-
-    # Streaming callback handler
-    class TokenStreamer(AsyncCallbackHandler):
-        def __init__(self):
-            self.queue = asyncio.Queue()
-
-        async def on_llm_new_token(self, token: str, **kwargs):
-            await self.queue.put(token)
-
-        async def on_llm_end(self, *args, **kwargs):
-            await self.queue.put(None)
-
-        async def generator(self):
-            while True:
-                token = await self.queue.get()
-                if token is None:
-                    break
-                yield token
-
-    streamer = TokenStreamer()
-
-    # Set up streaming model
+    
     llm = ChatOpenAI(
         model="mistralai/Mistral-7B-Instruct-v0.3",
         openai_api_base="https://westbchris--vllm-serve.modal.run/v1",
         openai_api_key="not-needed",
         temperature=0.7,
         streaming=True,
-        callbacks=[streamer],
     )
+    #import getpass
+    import os
 
-    # Fire off the generation in the background
-    asyncio.create_task(llm.ainvoke(prompt))
+
+
+    from langchain_openai import OpenAIEmbeddings
+
+    embeddings = OpenAIEmbeddings(model="text-embedding-3-large")        
+    
+    from langchain_chroma import Chroma
+
+    vector_store = Chroma(
+    
+        embedding_function=embeddings,
+        persist_directory="./vectorstore",  # Where to save data locally, remove if not necessary
+    )
+    from langchain import hub
+    from langchain_community.document_loaders import WebBaseLoader
+    from langchain_core.documents import Document
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+    from typing_extensions import List, TypedDict
+
+    
+
+    graph_builder = StateGraph(MessagesState)
+    # Step 1: Generate an AIMessage that may include a tool-call to be sent.
+    def query_or_respond(state: MessagesState):
+        """Generate tool call for retrieval or respond."""
+        llm_with_tools = llm.bind_tools([retrieve])
+        response = llm_with_tools.invoke(state["messages"])
+        # MessagesState appends messages to state instead of overwriting
+        return {"messages": [response]}
+
+
+    # Step 2: Execute the retrieval.
+    tools = ToolNode([retrieve])
+
+
+    # Step 3: Generate a response using the retrieved content.
+    def generate(state: MessagesState):
+        """Generate answer."""
+        # Get generated ToolMessages
+        recent_tool_messages = []
+        for message in reversed(state["messages"]):
+            if message.type == "tool":
+                recent_tool_messages.append(message)
+            else:
+                break
+        tool_messages = recent_tool_messages[::-1]
+
+        # Format into prompt
+        docs_content = "\n\n".join(doc.content for doc in tool_messages)
+        system_message_content = (
+            "You are an assistant for question-answering tasks. "
+            "Use the following pieces of retrieved context to answer "
+            "the question. If you don't know the answer, say that you "
+            "don't know. Use three sentences maximum and keep the "
+            "answer concise."
+            "\n\n"
+            f"{docs_content}"
+        )
+        conversation_messages = [
+            message
+            for message in state["messages"]
+            if message.type in ("human", "system")
+            or (message.type == "ai" and not message.tool_calls)
+        ]
+        prompt = [SystemMessage(system_message_content)] + conversation_messages
+
+        # Run
+        response = llm.invoke(prompt)
+        return {"messages": [response]}
+    from langgraph.graph import END
+    from langgraph.prebuilt import ToolNode, tools_condition
+    print("question:",question)
+    graph_builder.add_node(query_or_respond)
+    graph_builder.add_node(tools)
+    graph_builder.add_node(generate)
+
+    graph_builder.set_entry_point("query_or_respond")
+    graph_builder.add_conditional_edges(
+        "query_or_respond",
+        tools_condition,
+        {END: END, "tools": "tools"},
+    )
+    graph_builder.add_edge("tools", "generate")
+    graph_builder.add_edge("generate", END)
+    try:
+        graph = graph_builder.compile()
+        from fastapi.responses import StreamingResponse
+
+        async def event_generator():
+            async for step in graph.stream(
+                {"messages": [{"role": "user", "content": question}]},
+                stream_mode="values"
+            ):
+                # You might want to yield just the message content or chunk
+                
+                for msg in step.get("messages", []):
+                    if isinstance(msg, AIMessage):
+                        yield f"data: {msg.content}\n\n"
+        response = StreamingResponse(event_generator(), media_type="text/event-stream")
+        response.headers["Access-Control-Allow-Origin"] = "https://gotquestions-web.vercel.app"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        
+    except Exception as e:
+        print("Error in graph execution:", e)
+        # Handle the error appropriately, maybe return an error message or status
+        return {"error": "An error occurred during processing."}
+    return response
+    #return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+    
 
     # Stream response
-    return StreamingResponse(streamer.generator(), media_type="text/plain")
 
-@app.function(
-    secrets=[modal.Secret.from_name("openai-secret"), modal.Secret.from_name("langsmith-secret")],
-    volumes={"/vectorstore": vectorstore_volume, "/volumes/hf-cache": hf_cache},
-    timeout=6000,
-    
-)
-@modal.fastapi_endpoint(docs=True)
-def getDataAndAnswerQuestion(question: str, forceUpload: str):
-    try:
-        os.environ["HF_HOME"] = "/volumes/hf-cache"
 
-        from langchain_openai import ChatOpenAI
 
-        llm = ChatOpenAI(
-    model="mistralai/Mistral-7B-Instruct-v0.3",
-    openai_api_base="https://westbchris--vllm-deepseek-serve.modal.run/v1",
-    openai_api_key="not-needed",  # required by LangChain, but vLLM doesn't check
-        temperature=0.7
-    )
-
-        
-        retrieved_docs = query_vectorstore.remote(question)
-        #return {"content":"OK","sources":""}
-        state: State = {
-            "messages": [{"role": "user", "content": question}],
-            "context": retrieved_docs,
-            "llm": llm
-        }
-
-        result = generate(state)
-
-        sources_html = "".join(
-            f'<a href="{doc.metadata["url"]}" target="_blank">{doc.metadata["question"]}</a><br>'
-            for doc in result["context"]
-        )
-
-        return {
-            "content": result["messages"][-1],
-            "sources": sources_html
-        }
-
-    except Exception as e:
-        import traceback
-        print("Exception during generate():", e)
-        traceback.print_exc()
-        raise
 @app.function(
     secrets=[modal.Secret.from_name("openai-secret")],
     volumes={"/vectorstore": vectorstore_volume},
@@ -211,50 +264,23 @@ def query_vectorstore(query: str):
         embedding_function=OpenAIEmbeddings(model="text-embedding-3-large")
     )
     return vectorstore.similarity_search(query, k=2)
+from langchain_core.tools import tool
 
-def retrieveInfoForQuery(query: str):
-    vectorstore_path = "/vectorstore"
-    #the below line is causing hte error I think.
-    #vectorStore = Chroma(
-        #persist_directory=vectorstore_path,
-        #embedding_function=OpenAIEmbeddings(model="text-embedding-3-large")
-    #)
-    #retrieved_docs = vectorStore.similarity_search(query, k=2)
-    retrieved_docs=[]
+
+@tool(response_format="content_and_artifact")
+
+def retrieve(query: str):
+    """Retrieve information related to a query."""
+    vector_store= Chroma(persist_directory="/vectorstore", embedding_function=OpenAIEmbeddings(model="text-embedding-3-large"))
+    retrieved_docs = vector_store.similarity_search(query, k=2)
     serialized = "\n\n".join(
-        f"Source: {doc.metadata}\nContent: {doc.page_content}"
+        (f"Source: {doc.metadata}\n" f"Content: {doc.page_content}")
         for doc in retrieved_docs
     )
     return serialized, retrieved_docs
 
-def generate(state: State):
-    from torch import cuda
-    print("CUDA mem alloc:", cuda.memory_allocated() / 1e6, "MB")
-    print("CUDA mem reserved:", cuda.memory_reserved() / 1e6, "MB")
 
-    docs_content = "\n\n".join(doc.page_content for doc in state["context"])
-
-    system_message_content = (
-        "You are an assistant for question-answering tasks. "
-        "Use the following pieces of retrieved context to answer the question. "
-        "If you don't know the answer, say that you don't know. Keep the answer concise.\n\n"
-        f"{docs_content}"
-    )
-
-    # Construct a single prompt string instead of using message dicts
-    user_message = state["messages"][0]["content"]
-    prompt = f"{system_message_content}\n\nUser: {user_message}\nAssistant:"
-
-    response = state["llm"].invoke(prompt)
-    print("Response type:", type(response))
-    print("Response content:", response)
-    text = response.content.strip()
-
-    # Just return what's after the "Assistant:" prefix
-    if "Assistant:" in text:
-        text = text.split("Assistant:")[-1].strip()
-
-    return {"messages": [text], "context": state["context"]}
+    
 @app.local_entrypoint()
 def main():
     #preload_deepseek.remote()
