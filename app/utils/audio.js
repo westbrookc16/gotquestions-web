@@ -1,20 +1,16 @@
 "use client";
 import OpenAI from "openai";
 export async function sendAudioToWhisper(audioBlob) {
-  console.log("Starting...");
-  
-  const formData = new FormData();
-  formData.append("audio", audioBlob, "audio.wav");
-  const arrayBuffer = await audioBlob.arrayBuffer();
-  const bytes = new Uint8Array(arrayBuffer);
+  console.log("Detected audio type:", audioBlob.type); // e.g. "audio/webm", "audio/wav"
+
   const response = await fetch("https://westbchris--speech-api-transcribe-audio.modal.run", {
     method: "POST",
     headers: {
-      "Content-Type": "application/octet-stream", // Important!
+      "Content-Type": audioBlob.type || "application/octet-stream",
     },
-    body: bytes,
+    body: audioBlob,
   });
-//console.log(result.text); // Transcribed text
+
   return await response.text();
 }
 
