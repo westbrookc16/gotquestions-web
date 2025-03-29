@@ -87,7 +87,7 @@ export default function Home() {
 
       // CORS check — important
       if (!response.ok) {
-        throw new Error(`HTTP error ${response.status}`);
+        //throw new Error(`HTTP error ${response.status}`);
         setIsLoading(false);
         setHtml(`an error has occurred.`);
         return;
