@@ -65,11 +65,12 @@ export default function Home() {
     setIsLoading(true);
     setQuestion(values["question"]);
     //values["question"] = "";
-    form.reset();
+    //form.reset();
   }
 
   const [html, setHtml] = useState("");
   const [answer, setAnswer] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
   useEffect(() => {
     //get data from api
     async function getData() {
@@ -89,10 +90,13 @@ export default function Home() {
       if (!response.ok) {
         //throw new Error(`HTTP error ${response.status}`);
         setIsLoading(false);
-        setHtml(`an error has occurred.`);
+        setHtml(``);
+        setAnswer(``);
+        console.error(`HTTP error ${response.status}`);
+        setErrorMsg("There was an error with the request. Please try again.");
         return;
       }
-
+form.reset();
       // 🔥 Stream the body chunk by chunk
       const reader = response.body?.getReader();
       const decoder = new TextDecoder("utf-8");
@@ -173,6 +177,7 @@ export default function Home() {
           {isLoading && <LoadingOverlay />}
           <Content text={question} html={html} answer={answer} setLoading={setIsLoading} isLoading={isLoading} sources={sourcesHtml} />
           <br />
+          <div aria-live="assertive">{errorMsg &&  <div  className="text-red-500">{errorMsg}</div>}</div>
           If you are technical and wish to view the github repository, it is located <a href="https://github.com/westbrookc16/gotquestions-web">here.</a>
         </div>
       </main>
