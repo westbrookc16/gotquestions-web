@@ -45,7 +45,14 @@ async def synthesize_speech(request: Request):
 async def transcribe_audio(request:Request) -> str:
     openai.api_key = os.environ["OPENAI_API_KEY"]
     data = await request.body()  # 🔥 this gets raw bytes
-    audio_file = ("audio.wav", io.BytesIO(data), "audio/wav")
+    #audio_file = ("audio.wav", io.BytesIO(data), "audio/wav")
+    # Simple heuristic: infer from first few bytes, or just default to webm if mobile
+    content_type = request.headers.get("content-type", "audio/webm")
+    filename_ext = "webm" if "webm" in content_type else "wav"
+
+    audio_file = (f"audio.{filename_ext}", io.BytesIO(data), content_type)
+    print("extension", filename_ext)
+    print("content type", content_type)
 
     transcript = openai.audio.transcriptions.create(
         model="whisper-1",
