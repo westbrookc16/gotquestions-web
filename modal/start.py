@@ -16,7 +16,7 @@ from functools import lru_cache
 image = modal.Image.debian_slim().pip_install(
     "openai", "langchain", "langchain_community", "langchain_core",
     "langchain_huggingface", "langchain_openai", "langgraph", "langchain_chroma",
-    "transformers", "accelerate", "torch"
+    
 )
 
 app = modal.App("rag-deepseek-gpu", image=image)
@@ -208,38 +208,33 @@ async def streamAnswer(request: Request):
     )
     graph_builder.add_edge("tools", "generate")
     graph_builder.add_edge("generate", END)
-    try:
-        graph = graph_builder.compile()
-        from fastapi.responses import StreamingResponse
-
-        async def event_generator():
+    
+    graph = graph_builder.compile()
+    from fastapi.responses import StreamingResponse
+    async def event_generator():
+        try:
             print("started generator.")
             for step in graph.stream(
                 {"messages": [{"role": "user", "content": question}]},
                 stream_mode="values"
-            ):
-                # You might want to yield just the message content or chunk
+        ):
                 print("got step.")
                 for msg in step.get("messages", []):
                     if isinstance(msg, AIMessage):
                         yield f"data: {msg.content}\n\n"
-        response = StreamingResponse(event_generator(), media_type="text/event-stream")
-        response.headers["Access-Control-Allow-Origin"] = "https://gotquestions-web.vercel.app"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Allow-Headers"] = "*"
-        response.headers["Access-Control-Allow-Methods"] = "*"
-        return response
-        
-    except Exception as e:
-        print("Error in graph execution:", e)
-        # Handle the error appropriately, maybe return an error message or status
-        return {"error": "An error occurred during processing."}
-    
-    #return StreamingResponse(event_generator(), media_type="text/event-stream")
-
+        except Exception as e:
+            print("Error in stream generator:", e)
+            # Yield an SSE-formatted error so frontend can handle it
+            yield f"data: ERROR: An internal error occurred. Please try again.\n\n"
     
 
     # Stream response
+    response = StreamingResponse(event_generator(), media_type="text/event-stream")
+    response.headers["Access-Control-Allow-Origin"] = "https://gotquestions-web.vercel.app"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    return response
 
 
 

@@ -117,10 +117,16 @@ export default function Home() {
             if (line.startsWith("data:")) {
               const content = line.replace(/^data:\s*/, "");
               console.log("💬 Incoming chunk:", content);
+              if (content.startsWith("ERROR:")) {
+                setErrorMsg(content.replace("ERROR: ", ""));
+                setIsLoading(false);
+                return;
+              }
               // Do something with `content`, like append it to a chat window
               setHtml((prev) => prev + content);
               htmlString += content;
             }
+            
           }
 
           // Keep only the incomplete buffer at the end
