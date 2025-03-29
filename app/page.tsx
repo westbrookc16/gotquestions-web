@@ -62,7 +62,7 @@ export default function Home() {
     console.log(values);
     if (isLoading) return;
     track("text");
-    setIsLoading(true);
+    //setIsLoading(true);
     setQuestion(values["question"]);
     //values["question"] = "";
     //form.reset();
@@ -75,7 +75,7 @@ export default function Home() {
     //get data from api
     async function getData() {
       if (question === "") return;
-      //setIsLoading(true);
+      setIsLoading(true);
       setErrorMsg("");
       setHtml("");
       let htmlString = "";
