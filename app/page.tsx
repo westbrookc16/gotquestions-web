@@ -76,60 +76,66 @@ export default function Home() {
     async function getData() {
       if (question === "") return;
       //setIsLoading(true);
+      setErrorMsg("");
       setHtml("");
       let htmlString = "";
-      const response = await fetch("https://westbchris--rag-deepseek-gpu-streamanswer.modal.run", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ question }),
-      });
+      try {
+        const response = await fetch("https://westbchris--rag-deepseek-gpu-streamanswer.modal.run", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ question }),
+        });
 
-      // CORS check — important
-      if (!response.ok) {
-        //throw new Error(`HTTP error ${response.status}`);
+        // CORS check — important
+        if (!response.ok) {
+          throw new Error(`HTTP error ${response.status}`);
+
+          //return;
+        }
+        form.reset();
+        // 🔥 Stream the body chunk by chunk
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder("utf-8");
+
+        let buffer = "";
+
+        while (true) {
+          //@ts-ignore
+          const { done, value } = await reader.read();
+          if (done) { setAnswer(htmlString); break; }
+
+          const chunk = decoder.decode(value, { stream: true });
+          buffer += chunk;
+
+          // Parse SSE-style lines: "data: ...\n\n"
+          const lines = buffer.split("\n\n");
+
+          for (let i = 0; i < lines.length - 1; i++) {
+            const line = lines[i].trim();
+            if (line.startsWith("data:")) {
+              const content = line.replace(/^data:\s*/, "");
+              console.log("💬 Incoming chunk:", content);
+              // Do something with `content`, like append it to a chat window
+              setHtml((prev) => prev + content);
+              htmlString += content;
+            }
+          }
+
+          // Keep only the incomplete buffer at the end
+          buffer = lines[lines.length - 1];
+        }
+      } catch (error) {
         setIsLoading(false);
         setHtml(``);
         setAnswer(``);
-        console.error(`HTTP error ${response.status}`);
+        //console.error(`HTTP error ${response.status}`);
         setErrorMsg("There was an error with the request. Please try again.");
-        return;
       }
-form.reset();
-      // 🔥 Stream the body chunk by chunk
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder("utf-8");
-
-      let buffer = "";
-
-      while (true) {
-        //@ts-ignore
-        const { done, value } = await reader.read();
-        if (done) { setAnswer(htmlString); break; }
-
-        const chunk = decoder.decode(value, { stream: true });
-        buffer += chunk;
-
-        // Parse SSE-style lines: "data: ...\n\n"
-        const lines = buffer.split("\n\n");
-
-        for (let i = 0; i < lines.length - 1; i++) {
-          const line = lines[i].trim();
-          if (line.startsWith("data:")) {
-            const content = line.replace(/^data:\s*/, "");
-            console.log("💬 Incoming chunk:", content);
-            // Do something with `content`, like append it to a chat window
-            setHtml((prev) => prev + content);
-            htmlString += content;
-          }
-        }
-
-        // Keep only the incomplete buffer at the end
-        buffer = lines[lines.length - 1];
+      finally {
+        setIsLoading(false);
       }
-
-
       //setHtml(json.content + "<br/>" + "Sources:<br/>" + json.sources);
       //setAnswer(json.content);
     }
@@ -175,9 +181,9 @@ form.reset();
             </form>
           </Form>
           {isLoading && <LoadingOverlay />}
-          <Content text={question} html={html} answer={answer} setLoading={setIsLoading} isLoading={isLoading} sources={sourcesHtml} />
+          <Content text={question} html={html} answer={answer} setLoading={setIsLoading} isLoading={isLoading} sources={errorMsg !== "" ? "" : sourcesHtml} />
           <br />
-          <div aria-live="assertive">{errorMsg &&  <div  className="text-red-500">{errorMsg}</div>}</div>
+          <div aria-live="assertive">{errorMsg && <div className="text-red-500">{errorMsg}</div>}</div>
           If you are technical and wish to view the github repository, it is located <a href="https://github.com/westbrookc16/gotquestions-web">here.</a>
         </div>
       </main>
