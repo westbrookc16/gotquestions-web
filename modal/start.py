@@ -96,7 +96,7 @@ from langchain_core.messages import SystemMessage
     secrets=[modal.Secret.from_name("openai-secret"), modal.Secret.from_name("langsmith-secret")],
     volumes={"/vectorstore": vectorstore_volume, "/volumes/hf-cache": hf_cache},
     timeout=6000,
-    
+    scaledown_window=15*60
 )
 @modal.fastapi_endpoint(method="post", docs=True)
 async def streamAnswer(request: Request):
