@@ -135,6 +135,7 @@ export default function Home() {
       }
       finally {
         setIsLoading(false);
+        setQuestion("");
       }
       //setHtml(json.content + "<br/>" + "Sources:<br/>" + json.sources);
       //setAnswer(json.content);
