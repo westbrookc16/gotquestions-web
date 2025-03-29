@@ -36,6 +36,7 @@ export default function Home() {
 
   const [isLoading, setIsLoading] = useState(false);
 
+  const [screenReaderLoadingMessage, setScreenReaderLoadingMessage] = useState("");
 
 
 
@@ -172,7 +173,25 @@ export default function Home() {
     }
     getData();
 
-  }, [question]);
+  }, [submittedQuestion]);
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+  
+    if (isLoading) {
+      // Announce immediately
+      setScreenReaderLoadingMessage("Answer is loading...");
+  
+      intervalId = setInterval(() => {
+        setScreenReaderLoadingMessage(`Answer is still loading... ${new Date().toLocaleTimeString()}`);
+      }, 10000); // every 10 seconds
+    } else {
+      setScreenReaderLoadingMessage(""); // clear message
+      clearInterval(intervalId);
+    }
+  
+    return () => clearInterval(intervalId);
+  }, [isLoading]);
+  
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
@@ -206,6 +225,8 @@ export default function Home() {
           <div aria-live="assertive">{errorMsg && <div className="text-red-500">{errorMsg}</div>}</div>
           If you are technical and wish to view the github repository, it is located <a href="https://github.com/westbrookc16/gotquestions-web">here.</a>
         </div>
+      
+      <div aria-live="polite" className="sr-only">{screenReaderLoadingMessage}</div>
       </main>
 
     </div>
