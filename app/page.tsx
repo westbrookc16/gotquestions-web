@@ -79,72 +79,79 @@ export default function Home() {
       setErrorMsg("");
       setHtml("");
       let htmlString = "";
-      try {
-        const response = await fetch("https://westbchris--rag-deepseek-gpu-streamanswer.modal.run", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ question }),
-        });
+      const maxAttempts = 2;
+      let attempt = 0;
+      let response;
 
-        // CORS check — important
-        if (!response.ok) {
-          throw new Error(`HTTP error ${response.status}`);
+      while (attempt < maxAttempts) {
+        try {
+          response = await fetch("https://westbchris--rag-deepseek-gpu-streamanswer.modal.run", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ question }),
+          });
 
-          //return;
-        }
-        form.reset();
-        // 🔥 Stream the body chunk by chunk
-        const reader = response.body?.getReader();
-        const decoder = new TextDecoder("utf-8");
+          if (!response.ok) throw new Error(`HTTP error ${response.status}`);
 
-        let buffer = "";
 
-        while (true) {
-          //@ts-ignore
-          const { done, value } = await reader.read();
-          if (done) { setAnswer(htmlString); break; }
+          form.reset();
+          // 🔥 Stream the body chunk by chunk
+          const reader = response.body?.getReader();
+          const decoder = new TextDecoder("utf-8");
 
-          const chunk = decoder.decode(value, { stream: true });
-          buffer += chunk;
+          let buffer = "";
 
-          // Parse SSE-style lines: "data: ...\n\n"
-          const lines = buffer.split("\n\n");
+          while (true) {
+            //@ts-ignore
+            const { done, value } = await reader.read();
+            if (done) { setAnswer(htmlString); break; }
 
-          for (let i = 0; i < lines.length - 1; i++) {
-            const line = lines[i].trim();
-            if (line.startsWith("data:")) {
-              const content = line.replace(/^data:\s*/, "");
-              console.log("💬 Incoming chunk:", content);
-              if (content.startsWith("ERROR:")) {
-                setErrorMsg(content.replace("ERROR: ", ""));
-                setIsLoading(false);
-                return;
+            const chunk = decoder.decode(value, { stream: true });
+            buffer += chunk;
+
+            // Parse SSE-style lines: "data: ...\n\n"
+            const lines = buffer.split("\n\n");
+
+            for (let i = 0; i < lines.length - 1; i++) {
+              const line = lines[i].trim();
+              if (line.startsWith("data:")) {
+                const content = line.replace(/^data:\s*/, "");
+                console.log("💬 Incoming chunk:", content);
+                if (content.startsWith("ERROR:")) {
+                  setErrorMsg(content.replace("ERROR: ", ""));
+                  setIsLoading(false);
+                  return;
+                }
+                // Do something with `content`, like append it to a chat window
+                setHtml((prev) => prev + content);
+                htmlString += content;
               }
-              // Do something with `content`, like append it to a chat window
-              setHtml((prev) => prev + content);
-              htmlString += content;
-            }
-            
-          }
 
-          // Keep only the incomplete buffer at the end
-          buffer = lines[lines.length - 1];
+            }
+
+            // Keep only the incomplete buffer at the end
+            buffer = lines[lines.length - 1];
+          }
+          break; // Success — break out of retry loop
+        } catch (err) {
+          attempt++;
+          if (attempt >= maxAttempts) {
+            console.error("❌ Failed after retries:", err);
+            setErrorMsg("The server didn't respond. Please try again.");
+            setIsLoading(false);
+            return;
+          }
+          // Optional: small delay before retrying
+          await new Promise((resolve) => setTimeout(resolve, 500));
         }
-      } catch (error) {
-        setIsLoading(false);
-        setHtml(``);
-        setAnswer(``);
-        //console.error(`HTTP error ${response.status}`);
-        setErrorMsg("There was an error with the request. Please try again.");
       }
-      finally {
-        setIsLoading(false);
-        setQuestion("");
-      }
-      //setHtml(json.content + "<br/>" + "Sources:<br/>" + json.sources);
+
+
+      //setHtml(json.content + "<br/>" + "Sources:<brs/>" + json.sources);
       //setAnswer(json.content);
+      setIsLoading(false);
     }
 
     getData();
