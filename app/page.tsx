@@ -40,11 +40,13 @@ export default function Home() {
 
 
   const [question, setQuestion] = useState("");
+  const [submittedQuestion,setSubmittedQuestion]=useState("");
 
 
 
   const updateQuestion = (text: string) => {
     setQuestion(text);
+    setSubmittedQuestion(text);
   }
 
   // 1. Define your form.
@@ -64,6 +66,7 @@ export default function Home() {
     track("text");
     //setIsLoading(true);
     setQuestion(values["question"]);
+    setSubmittedQuestion(values["question"]);
     //values["question"] = "";
     //form.reset();
   }
@@ -74,7 +77,7 @@ export default function Home() {
   useEffect(() => {
     //get data from api
     async function getData() {
-      if (question === "") return;
+      if (submittedQuestion === "") return;
       setIsLoading(true);
       setErrorMsg("");
       setHtml("");
@@ -90,7 +93,7 @@ export default function Home() {
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ question }),
+            body: JSON.stringify({ question:submittedQuestion }),
           });
 
           if (!response.ok) throw new Error(`HTTP error ${response.status}`);
@@ -122,6 +125,7 @@ export default function Home() {
                 if (content.startsWith("ERROR:")) {
                   setErrorMsg(content.replace("ERROR: ", ""));
                   setIsLoading(false);
+                  setSubmittedQuestion("");
                   return;
                 }
                 // Do something with `content`, like append it to a chat window
@@ -152,14 +156,15 @@ export default function Home() {
       //setHtml(json.content + "<br/>" + "Sources:<brs/>" + json.sources);
       //setAnswer(json.content);
       setIsLoading(false);
+      setSubmittedQuestion("");
     }
 
     getData();
-  }, [question]);
+  }, [submittedQuestion]);
   const [sourcesHtml, setSourcesHtml] = useState("");
   useEffect(() => {
     async function getData() {
-      if (question === "") return;
+      if (submittedQuestion=== ""||errorMsg!=="") return;
       const res = await fetch(`https://westbchris--rag-deepseek-gpu-getsources.modal.run?question=${encodeURIComponent(question)}`);
       const json = await res.json();
       setSourcesHtml(json.sources);
