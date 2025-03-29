@@ -145,6 +145,7 @@ export default function Home() {
   const [sourcesHtml, setSourcesHtml] = useState("");
   useEffect(() => {
     async function getData() {
+      if (question === "") return;
       const res = await fetch(`https://westbchris--rag-deepseek-gpu-getsources.modal.run?question=${encodeURIComponent(question)}`);
       const json = await res.json();
       setSourcesHtml(json.sources);
