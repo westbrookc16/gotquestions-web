@@ -141,6 +141,7 @@ export default function Home() {
             console.error("❌ Failed after retries:", err);
             setErrorMsg("The server didn't respond. Please try again.");
             setIsLoading(false);
+            setSubmittedQuestion("");
             return;
           }
           // Optional: small delay before retrying
