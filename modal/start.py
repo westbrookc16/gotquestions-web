@@ -94,11 +94,12 @@ from langchain_core.messages import SystemMessage
 
 @app.function(
     secrets=[modal.Secret.from_name("openai-secret"), modal.Secret.from_name("langsmith-secret")],
-    volumes={"/vectorstore": vectorstore_volume, "/volumes/hf-cache": hf_cache},
+    
+        volumes={"/vectorstore": vectorstore_volume, "/volumes/hf-cache": hf_cache},
     timeout=6000,
     scaledown_window=15*60
 )
-@modal.fastapi_endpoint(method="post", docs=True)
+@modal.fastapi_endpoint(method="post", docs=True,requires_proxy_auth=True)
 async def streamAnswer(request: Request):
     from langgraph.prebuilt import ToolNode
     import os
@@ -243,7 +244,7 @@ async def streamAnswer(request: Request):
     volumes={"/vectorstore": vectorstore_volume},
     timeout=300,
 )
-@modal.fastapi_endpoint(docs=True)
+@modal.fastapi_endpoint(docs=True,requires_proxy_auth=True)
 def getSources(question: str):
     retrieved_docs = query_vectorstore.remote(question)
 

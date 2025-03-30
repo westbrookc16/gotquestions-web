@@ -1,4 +1,5 @@
 "use client";
+import { modalFetch } from "./utils/modal";
 import AudioRecording from "@/app/components/audio";
 import { track } from '@vercel/analytics';
 
@@ -89,13 +90,7 @@ export default function Home() {
 
       while (attempt < maxAttempts) {
         try {
-          response = await fetch("https://westbchris--rag-deepseek-gpu-streamanswer.modal.run", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ question: submittedQuestion }),
-          });
+          response = await modalFetch("https://westbchris--rag-deepseek-gpu-streamanswer.modal.run", JSON.stringify({ question: submittedQuestion }));
 
           if (!response.ok) throw new Error(`HTTP error ${response.status}`);
 
@@ -166,7 +161,8 @@ export default function Home() {
   useEffect(() => {
     async function getData() {
       if (submittedQuestion === "" || errorMsg !== "") return;
-      const res = await fetch(`https://westbchris--rag-deepseek-gpu-getsources.modal.run?question=${encodeURIComponent(question)}`);
+      //@ts-ignore
+      const res = await fetch(`https://westbchris--rag-deepseek-gpu-getsources.modal.run?question=${encodeURIComponent(submittedQuestion)}`,{"headers": {"Modal-Key": process.env.NEXT_PUBLIC_MODAL_KEY, "Modal-Secret": process.env.NEXT_PUBLIC_MODAL_SECRET}});
       const json = await res.json();
       setSourcesHtml(json.sources);
 

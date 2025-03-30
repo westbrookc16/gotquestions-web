@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { modalFetch } from "../utils/modal";
 
 export default function TextToSpeech({ text, setLoading }: { text: String, setLoading: Function }) {
   const [audioSrc, setAudioSrc] = useState("");
@@ -10,11 +11,7 @@ export default function TextToSpeech({ text, setLoading }: { text: String, setLo
     //setLoading(true);
     try {
       
-      const response = await fetch("https://westbchris--speech-api-synthesize-speech.modal.run", {
-        method: "POST",
-        body: JSON.stringify({ text }),
-        headers: { "Content-Type": "application/json" },
-      });
+      const response = await modalFetch("https://westbchris--speech-api-synthesize-speech.modal.run", JSON.stringify({ text }));
     
     
 

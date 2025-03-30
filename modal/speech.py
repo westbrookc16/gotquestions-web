@@ -17,7 +17,7 @@ import io
 import os
 
 @app.function(secrets=[modal.Secret.from_name("openai-secret")])
-@fastapi_endpoint(method="POST")
+@fastapi_endpoint(method="POST",requires_proxy_auth=True)
 async def synthesize_speech(request: Request):
     data = await request.json()
     text = data.get("text", "")
@@ -41,7 +41,7 @@ async def synthesize_speech(request: Request):
 
 
 @app.function(secrets=[modal.Secret.from_name("openai-secret")])
-@fastapi_endpoint(method="POST")
+@fastapi_endpoint(method="POST",requires_proxy_auth=True)
 async def transcribe_audio(request:Request) -> str:
     openai.api_key = os.environ["OPENAI_API_KEY"]
     data = await request.body()  # 🔥 this gets raw bytes
