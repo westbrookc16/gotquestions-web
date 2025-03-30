@@ -7,7 +7,7 @@ const Content = ({ html, answer, text, setLoading, isLoading, sources }: { sourc
     return (
         <div>
             {text}<br />
-            <div aria-live="polite" className="text-lg font-semibold">{isLoading ? "Loading..." : ""}</div>
+            <div  className="text-lg font-semibold">{isLoading ? "Loading..." : ""}</div>
             <div dangerouslySetInnerHTML={{ __html: html }} />
             {!isLoading && (sources != "") && (<div>
                 <br />Sources
