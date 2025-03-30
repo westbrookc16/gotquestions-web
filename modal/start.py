@@ -105,7 +105,13 @@ async def streamAnswer(request: Request):
     import os
     os.environ["HF_HOME"] = "/volumes/hf-cache"
     from langchain_openai import ChatOpenAI
-    
+    if request.method == "OPTIONS":
+        response = Response()
+        response.headers["Access-Control-Allow-Origin"] = "https://gotquestions-web.vercel.app"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        return response
     body = await request.json()
     question = body["question"]
 
