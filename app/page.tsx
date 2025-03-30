@@ -41,7 +41,7 @@ export default function Home() {
 
 
   const [question, setQuestion] = useState("");
-  const [submittedQuestion,setSubmittedQuestion]=useState("");
+  const [submittedQuestion, setSubmittedQuestion] = useState("");
 
 
 
@@ -94,7 +94,7 @@ export default function Home() {
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ question:submittedQuestion }),
+            body: JSON.stringify({ question: submittedQuestion }),
           });
 
           if (!response.ok) throw new Error(`HTTP error ${response.status}`);
@@ -165,7 +165,7 @@ export default function Home() {
   const [sourcesHtml, setSourcesHtml] = useState("");
   useEffect(() => {
     async function getData() {
-      if (submittedQuestion=== ""||errorMsg!=="") return;
+      if (submittedQuestion === "" || errorMsg !== "") return;
       const res = await fetch(`https://westbchris--rag-deepseek-gpu-getsources.modal.run?question=${encodeURIComponent(question)}`);
       const json = await res.json();
       setSourcesHtml(json.sources);
@@ -175,23 +175,25 @@ export default function Home() {
 
   }, [submittedQuestion]);
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
-  
+    let intervalId: NodeJS.Timeout | undefined;
+
     if (isLoading) {
       // Announce immediately
       setScreenReaderLoadingMessage("Answer is loading...");
-  
+      let toggle = false;
       intervalId = setInterval(() => {
-        setScreenReaderLoadingMessage(`Answer is still loading... ${new Date().toLocaleTimeString()}`);
+        toggle = !toggle;
+        setScreenReaderLoadingMessage(toggle ? "Still loading, please wait..." : "Generating your answer...");
       }, 10000); // every 10 seconds
     } else {
       setScreenReaderLoadingMessage(""); // clear message
-      clearInterval(intervalId);
+
+      if (intervalId) clearInterval(intervalId);
     }
-  
-    return () => clearInterval(intervalId);
+
+    return () => { setScreenReaderLoadingMessage(""); if (intervalId) clearInterval(intervalId); }
   }, [isLoading]);
-  
+
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
@@ -225,8 +227,8 @@ export default function Home() {
           <div aria-live="assertive">{errorMsg && <div className="text-red-500">{errorMsg}</div>}</div>
           If you are technical and wish to view the github repository, it is located <a href="https://github.com/westbrookc16/gotquestions-web">here.</a>
         </div>
-      
-      <div aria-live="polite" className="sr-only">{screenReaderLoadingMessage}</div>
+
+        <div aria-live="polite" className="sr-only">{screenReaderLoadingMessage}</div>
       </main>
 
     </div>
