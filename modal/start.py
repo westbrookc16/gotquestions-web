@@ -222,14 +222,20 @@ async def streamAnswer(request: Request):
     graph_builder.add_edge("generate", END)
     
     graph = graph_builder.compile()
+    from langgraph.checkpoint.memory import MemorySaver
+
+    memory = MemorySaver()
+    from langgraph.prebuilt import create_react_agent
+    #graph=create_react_agent(llm,[retrieve],checkpointer=memory)
+    config = {"configurable": {"thread_id": "abc123"}}
     from fastapi.responses import StreamingResponse
     async def event_generator():
         try:
             print("started generator.")
             for step in graph.stream(
                 {"messages": [{"role": "user", "content": question}]},
-                stream_mode="values"
-        ):
+                stream_mode="values",
+        config=config,):
                 print("got step.")
                 for msg in step.get("messages", []):
                     if isinstance(msg, AIMessage):
@@ -264,6 +270,8 @@ def getSources(request:Request):
     if api_key!=req_api_key:
         return Response("",media_type="text/plain", status_code=401)
     retrieved_docs = query_vectorstore.remote(question)
+    if not retrieved_docs:
+        return {"sources": "No sources found."}
 
     seen_urls = set()
     sources_html = ""
@@ -283,7 +291,14 @@ def query_vectorstore(query: str):
         persist_directory="/vectorstore",
         embedding_function=OpenAIEmbeddings(model="text-embedding-3-large")
     )
-    return vectorstore.similarity_search(query, k=2)
+    results=vectorstore.similarity_search_with_score(query, k=5)
+    # Filter results based on score threshold
+    # Adjust the threshold as needed
+    # For example, if you want to keep results with score >= 0.8:
+    #write scores to console
+    for doc, score in results:
+        print(f"Document: {doc.metadata}, Score: {score}")
+    return [doc for doc, score in results if score <= 0.8]
 from langchain_core.tools import tool
 
 
@@ -292,7 +307,8 @@ from langchain_core.tools import tool
 def retrieve(query: str):
     """Retrieve information related to a query."""
     vector_store= Chroma(persist_directory="/vectorstore", embedding_function=OpenAIEmbeddings(model="text-embedding-3-large"))
-    retrieved_docs = vector_store.similarity_search(query, k=2)
+    results= vector_store.similarity_search_with_score(query,k=5)
+    retrieved_docs = [doc for doc, score in results if score <= 0.8]
     serialized = "\n\n".join(
         (f"Source: {doc.metadata}\n" f"Content: {doc.page_content}")
         for doc in retrieved_docs
