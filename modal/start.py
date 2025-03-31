@@ -105,7 +105,7 @@ async def streamAnswer(request: Request):
     import os
     os.environ["HF_HOME"] = "/volumes/hf-cache"
     #check for api key
-    api_key=os.environ.get("API_KEY")
+    api_key=os.environ["API_KEY"]
     req_api_key=request.headers.get("x-api-key")
     if api_key!=req_api_key:
         return Response("",media_type="text/plain", status_code=401)
@@ -259,7 +259,7 @@ async def streamAnswer(request: Request):
 def getSources(request:Request):
     question=request.query_params.get("question")
     #check for api key
-    api_key=os.environ.get("API_KEY")
+    api_key=os.environ["API_KEY"]
     req_api_key=request.headers.get("x-api-key")
     if api_key!=req_api_key:
         return Response("",media_type="text/plain", status_code=401)

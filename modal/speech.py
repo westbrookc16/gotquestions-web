@@ -21,7 +21,7 @@ import os
                                                                    )
 async def synthesize_speech(request: Request):
     #check for api key
-    api_key=os.environ.get("API_KEY")
+    api_key=os.environ["API_KEY"]
     req_api_key=request.headers.get("x-api-key")
     if api_key!=req_api_key:
         return StreamingResponse(io.BytesIO(b""), media_type="text/plain", status_code=401)
@@ -51,7 +51,7 @@ async def synthesize_speech(request: Request):
 async def transcribe_audio(request:Request) -> str:
     openai.api_key = os.environ["OPENAI_API_KEY"]
     #check for api key
-    api_key=os.environ.get("API_KEY")
+    api_key=os.environ["API_KEY"]
     req_api_key=request.headers.get("x-api-key")
     if api_key!=req_api_key:
         return StreamingResponse(io.BytesIO(b""), media_type="text/plain", status_code=401)
