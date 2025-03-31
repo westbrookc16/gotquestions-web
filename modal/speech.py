@@ -16,9 +16,15 @@ import openai
 import io
 import os
 
-@app.function(secrets=[modal.Secret.from_name("openai-secret")])
-@fastapi_endpoint(method="POST",requires_proxy_auth=True)
+@app.function(secrets=[modal.Secret.from_name("openai-secret"),modal.Secret.from_name("api-key")])
+@fastapi_endpoint(method="POST",requires_proxy_auth=False,
+                                                                   )
 async def synthesize_speech(request: Request):
+    #check for api key
+    api_key=os.environ.get("API_KEY")
+    req_api_key=request.headers.get("x-api-key")
+    if api_key!=req_api_key:
+        return StreamingResponse(io.BytesIO(b""), media_type="text/plain", status_code=401)
     data = await request.json()
     text = data.get("text", "")
 
@@ -40,10 +46,15 @@ async def synthesize_speech(request: Request):
 
 
 
-@app.function(secrets=[modal.Secret.from_name("openai-secret")])
-@fastapi_endpoint(method="POST",requires_proxy_auth=True)
+@app.function(secrets=[modal.Secret.from_name("openai-secret"),modal.Secret.from_name("api-key")])
+@fastapi_endpoint(method="POST",requires_proxy_auth=False,)
 async def transcribe_audio(request:Request) -> str:
     openai.api_key = os.environ["OPENAI_API_KEY"]
+    #check for api key
+    api_key=os.environ.get("API_KEY")
+    req_api_key=request.headers.get("x-api-key")
+    if api_key!=req_api_key:
+        return StreamingResponse(io.BytesIO(b""), media_type="text/plain", status_code=401)
     data = await request.body()  # 🔥 this gets raw bytes
     #audio_file = ("audio.wav", io.BytesIO(data), "audio/wav")
     # Simple heuristic: infer from first few bytes, or just default to webm if mobile

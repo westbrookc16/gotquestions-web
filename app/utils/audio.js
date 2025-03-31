@@ -7,7 +7,7 @@ export async function sendAudioToWhisper(audioBlob) {
   const response = await fetch("https://westbchris--speech-api-transcribe-audio.modal.run", {
     method: "POST",
     headers: {
-      "modal-secret": process.env.NEXT_PUBLIC_MODAL_SECRET, "modal-key": process.env.NEXT_PUBLIC_MODAL_KEY, "Content-Type": audioBlob.type || "application/octet-stream",
+      "x-api-key": process.env.NEXT_PUBLIC_API_KEY, "Content-Type": audioBlob.type || "application/octet-stream",
     },
     body: audioBlob,
   });

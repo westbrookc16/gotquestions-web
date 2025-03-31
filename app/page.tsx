@@ -163,7 +163,7 @@ export default function Home() {
     async function getData() {
       if (submittedQuestion === "" || errorMsg !== "") return;
       //@ts-ignore
-      const res = await fetch(`https://westbchris--rag-deepseek-gpu-getsources.modal.run?question=${encodeURIComponent(submittedQuestion)}`,{"headers": {"Modal-Key": process.env.NEXT_PUBLIC_MODAL_KEY, "Modal-Secret": process.env.NEXT_PUBLIC_MODAL_SECRET}});
+      const res = await fetch(`https://westbchris--rag-deepseek-gpu-getsources.modal.run?question=${encodeURIComponent(submittedQuestion)}`, { "headers": { "x-api-key": process.env.NEXT_PUBLIC_API_KEY } });
       const json = await res.json();
       setSourcesHtml(json.sources);
 

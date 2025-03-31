@@ -93,17 +93,22 @@ from langchain_core.messages import SystemMessage
 
 
 @app.function(
-    secrets=[modal.Secret.from_name("openai-secret"), modal.Secret.from_name("langsmith-secret")],
+    secrets=[modal.Secret.from_name("openai-secret"), modal.Secret.from_name("langsmith-secret"),modal.Secret.from_name("api-key")],
     
         volumes={"/vectorstore": vectorstore_volume, "/volumes/hf-cache": hf_cache},
     timeout=6000,
     scaledown_window=15*60
 )
-@modal.fastapi_endpoint(method="post", docs=True,requires_proxy_auth=True)
+@modal.fastapi_endpoint(method="POST", docs=True)
 async def streamAnswer(request: Request):
     from langgraph.prebuilt import ToolNode
     import os
     os.environ["HF_HOME"] = "/volumes/hf-cache"
+    #check for api key
+    api_key=os.environ.get("API_KEY")
+    req_api_key=request.headers.get("x-api-key")
+    if api_key!=req_api_key:
+        return Response("",media_type="text/plain", status_code=401)
     from langchain_openai import ChatOpenAI
     if request.method == "OPTIONS":
         response = Response()
@@ -246,12 +251,18 @@ async def streamAnswer(request: Request):
 
 
 @app.function(
-    secrets=[modal.Secret.from_name("openai-secret")],
+    secrets=[modal.Secret.from_name("openai-secret"),modal.Secret.from_name("api-key")],
     volumes={"/vectorstore": vectorstore_volume},
     timeout=300,
 )
-@modal.fastapi_endpoint(docs=True,requires_proxy_auth=True)
-def getSources(question: str):
+@modal.fastapi_endpoint(docs=True,requires_proxy_auth=False,)
+def getSources(request:Request):
+    question=request.query_params.get("question")
+    #check for api key
+    api_key=os.environ.get("API_KEY")
+    req_api_key=request.headers.get("x-api-key")
+    if api_key!=req_api_key:
+        return Response("",media_type="text/plain", status_code=401)
     retrieved_docs = query_vectorstore.remote(question)
 
     seen_urls = set()
