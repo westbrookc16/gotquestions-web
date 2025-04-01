@@ -77,6 +77,8 @@ vllm_cache_vol = modal.Volume.from_name("vllm-cache", create_if_missing=True)
 # using the API key we provide it.
 
 # We wrap it in the [`@modal.web_server` decorator](https://modal.com/docs/guide/webhooks#non-asgi-web-servers)
+
+
 # to connect it to the Internet.
 
 app = modal.App("vllm")
@@ -88,9 +90,21 @@ MINUTES = 60  # seconds
 
 VLLM_PORT = 8000
 
-
+@app.function(
+    schedule=modal.Cron(
+    "*/10 13-21 * * 1-5"  # Every 10 mins, 9am–5pm ET in UTC
+    )
+)
+def keep_vllm_alive():
+    import requests
+    try:
+        requests.get(serve.web_url+"health", timeout=5)
+        print("Pinged vLLM server.")
+    except Exception as e:
+        print("Failed to ping:", e)
 @app.function(
     image=vllm_image,
+    
     gpu=f"A100:{N_GPU}",
     # how many requests can one replica handle? tune carefully!
     allow_concurrent_inputs=100,
