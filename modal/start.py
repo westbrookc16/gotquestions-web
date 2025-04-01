@@ -121,13 +121,14 @@ async def streamAnswer(request: Request):
     question = body["question"]
 
     
-    llm = ChatOpenAI(
-        model="mistralai/Mistral-7B-Instruct-v0.3",
-        openai_api_base="https://westbchris--vllm-serve.modal.run/v1",
-        openai_api_key="not-needed",
-        temperature=0.7,
-        streaming=True,
-    )
+    #llm = ChatOpenAI(
+        #model="mistralai/Mistral-7B-Instruct-v0.3",
+        #openai_api_base="https://westbchris--vllm-serve.modal.run/v1",
+        #openai_api_key="not-needed",
+        #temperature=0.7,
+        #streaming=True,
+    #)
+    llm=ChatOpenAI()
     #import getpass
     import os
 
