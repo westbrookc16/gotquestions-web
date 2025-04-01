@@ -11,7 +11,7 @@ export default function TextToSpeech({ text, setLoading }: { text: String, setLo
     //setLoading(true);
     try {
       
-      const response = await modalFetch("https://westbchris--speech-api-synthesize-speech.modal.run", JSON.stringify({ text }));
+      const response = await fetch("/api/textToSpeech", {body: JSON.stringify({ text }), method: "POST", headers: { "Content-Type": "application/json" } });
     
     
 

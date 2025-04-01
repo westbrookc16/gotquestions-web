@@ -3,22 +3,28 @@ import { NextRequest } from "next/server";
 export async function POST(req: NextRequest) {
   const body = await req.json();
 
-  const modalRes = await fetch("https://westbchris--rag-deepseek-gpu-streamanswer.modal.run", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  const modalRes = await fetch(
+    "https://westbchris--rag-deepseek-gpu-streamanswer.modal.run",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.API_KEY || "",
+      },
+      body: JSON.stringify(body),
+    }
+  );
 
-  if (!modalRes.body) {
-    return new Response("No body from Modal", { status: 500 });
+  if (!modalRes.ok || !modalRes.body) {
+    return new Response("Failed to fetch from Modal", { status: 500 });
   }
 
   return new Response(modalRes.body, {
+    status: 200,
     headers: {
-      "Content-Type": "text/plain"
-      
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
     },
   });
 }

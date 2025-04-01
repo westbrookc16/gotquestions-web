@@ -1,24 +1,20 @@
+// app/api/text-to-speech/route.ts (App Router)
+
 export async function POST(req: Request) {
-  const formData = await req.formData();
-  const audioFile = formData.get("audio") as Blob;
-  //console.log("audioFile", audioFile);
-  const arrayBuffer = await audioFile.arrayBuffer();
-  const bytes = new Uint8Array(arrayBuffer);
+  const bytes = new Uint8Array(await req.arrayBuffer());
 
   const response = await fetch("https://westbchris--speech-api-transcribe-audio.modal.run", {
     method: "POST",
     headers: {
-      "Content-Type": "application/octet-stream", // Important!
+      "Content-Type": "application/octet-stream",
+      "x-api-key": process.env.API_KEY || "",
     },
     body: bytes,
   });
-  /*const response = await fetch("https://westbchris--speech-api-transcribe-audio.modal.run", {
-    method: "POST",
-    body: audioFile,
-  });*/
 
   const text = await response.text();
-  return new Response(JSON.stringify({"text": text }), {
+
+  return new Response(JSON.stringify({ text }), {
     headers: { "Content-Type": "application/json" },
   });
 }

@@ -90,7 +90,7 @@ export default function Home() {
 
       while (attempt < maxAttempts) {
         try {
-          response = await modalFetch("https://westbchris--rag-deepseek-gpu-streamanswer.modal.run", JSON.stringify({ question: submittedQuestion }));
+          response = await fetch("/api/ask", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: submittedQuestion }) });
 
           if (!response.ok) throw new Error(`HTTP error ${response.status}`);
 
@@ -162,8 +162,7 @@ export default function Home() {
   useEffect(() => {
     async function getData() {
       if (submittedQuestion === "" || errorMsg !== "") return;
-      //@ts-ignore
-      const res = await fetch(`https://westbchris--rag-deepseek-gpu-getsources.modal.run?question=${encodeURIComponent(submittedQuestion)}`, { "headers": { "x-api-key": process.env.NEXT_PUBLIC_API_KEY } });
+      const res = await fetch("/api/getsources", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: submittedQuestion }) });
       const json = await res.json();
       setSourcesHtml(json.sources);
 

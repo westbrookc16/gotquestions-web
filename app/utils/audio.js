@@ -4,10 +4,10 @@ import { modalFetch } from "./modal";
 export async function sendAudioToWhisper(audioBlob) {
   console.log("Detected audio type:", audioBlob.type); // e.g. "audio/webm", "audio/wav"
 
-  const response = await fetch("https://westbchris--speech-api-transcribe-audio.modal.run", {
+  const response = await fetch("/api/text-to-speech", {
     method: "POST",
     headers: {
-      "x-api-key": process.env.NEXT_PUBLIC_API_KEY, "Content-Type": audioBlob.type || "application/octet-stream",
+       "Content-Type": audioBlob.type || "application/octet-stream",
     },
     body: audioBlob,
   });

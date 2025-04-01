@@ -128,7 +128,7 @@ async def streamAnswer(request: Request):
         #temperature=0.7,
         #streaming=True,
     #)
-    llm=ChatOpenAI()
+    llm=ChatOpenAI(streaming=True)
     #import getpass
     import os
 

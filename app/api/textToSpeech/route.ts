@@ -4,7 +4,7 @@ export async function POST(req: Request) {
   const response = await fetch("https://westbchris--speech-api-synthesize-speech.modal.run", {
     method: "POST",
     body: JSON.stringify({ text }),
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json","x-api-key": process.env.API_KEY || "" },
   });
 
   const audioBuffer = await response.arrayBuffer();
