@@ -264,20 +264,21 @@ def getSources(request:Request):
         return Response("",media_type="text/plain", status_code=401)
     retrieved_docs = query_vectorstore.remote(question)
     if not retrieved_docs:
-        return {"sources": "No sources found."}
+        return {"sources": []}
 
-    
+    returned_docs=[]
     seen_urls = set()
-    sources_html = ""
+    
 
     for doc in retrieved_docs:
         url = doc.metadata.get("url")
         question_text = doc.metadata.get("question", "")
         if url and url not in seen_urls:
             seen_urls.add(url)
-            sources_html += f'<a href="{url}" target="_blank">{question_text}</a><br>'
+            #sources_html += f'<a href="{url}" target="_blank">{question_text}</a><br>'
+            returned_docs.append({"url": url, "question": question_text})
 
-    return {"sources": sources_html}
+    return {"sources": returned_docs}
 
 @app.function(volumes={"/vectorstore": vectorstore_volume},secrets=[modal.Secret.from_name("openai-secret"), modal.Secret.from_name("langsmith-secret")],timeout=6000)
 def query_vectorstore(query: str):

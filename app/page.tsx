@@ -158,13 +158,13 @@ export default function Home() {
 
     getData();
   }, [submittedQuestion]);
-  const [sourcesHtml, setSourcesHtml] = useState("");
+  const [sources, setSources] = useState([]);
   useEffect(() => {
     async function getData() {
       if (submittedQuestion === "" || errorMsg !== "") return;
       const res = await fetch("/api/getsources", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: submittedQuestion }) });
       const json = await res.json();
-      setSourcesHtml(json.sources);
+      setSources(json.sources);
 
     }
     getData();
@@ -218,7 +218,7 @@ export default function Home() {
             </form>
           </Form>
           {isLoading && <LoadingOverlay />}
-          <Content text={question} html={html} answer={answer} setLoading={setIsLoading} isLoading={isLoading} sources={errorMsg !== "" ? "" : sourcesHtml} />
+          <Content text={question} html={html} answer={answer} setLoading={setIsLoading} isLoading={isLoading} sources={errorMsg !== "" ? [] : sources} />
           <br />
           <div aria-live="assertive">{errorMsg && <div className="text-red-500">{errorMsg}</div>}</div>
           If you are technical and wish to view the github repository, it is located <a href="https://github.com/westbrookc16/gotquestions-web">here.</a>
