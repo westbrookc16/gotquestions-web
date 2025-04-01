@@ -266,6 +266,7 @@ def getSources(request:Request):
     if not retrieved_docs:
         return {"sources": "No sources found."}
 
+    
     seen_urls = set()
     sources_html = ""
 
@@ -292,6 +293,8 @@ def query_vectorstore(query: str):
     #write scores to console
     for doc, score in results:
         print(f"Document: {doc.metadata}, Score: {score}")
+    #return a list of docs, sorted with lowest score first
+    results.sort(key=lambda x: x[1])
     return [doc for doc, score in results if score <= 0.9]
 
 
