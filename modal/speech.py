@@ -35,7 +35,7 @@ async def synthesize_speech(request: Request):
     voice = data.get("voice", "nova")  # Default to "nova" if not provided
 
     response = openai.audio.speech.create(
-        model="tts-1",
+        model="gpt-4o-mini-tts",
         voice=voice,
         input=text,
     )
