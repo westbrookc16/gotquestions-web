@@ -101,15 +101,20 @@ from langchain_core.messages import SystemMessage
 )
 @modal.fastapi_endpoint(method="POST", docs=True)
 async def streamAnswer(request: Request):
-    from langgraph.prebuilt import ToolNode
     import os
-    os.environ["HF_HOME"] = "/volumes/hf-cache"
-    #check for api key
-    api_key=os.environ["API_KEY"]
-    req_api_key=request.headers.get("x-api-key")
-    if api_key!=req_api_key:
-        return Response("",media_type="text/plain", status_code=401)
+    from fastapi.responses import StreamingResponse
     from langchain_openai import ChatOpenAI
+    from langchain_core.messages import SystemMessage
+
+    os.environ["HF_HOME"] = "/volumes/hf-cache"
+
+    # Auth
+    api_key = os.environ["API_KEY"]
+    req_api_key = request.headers.get("x-api-key")
+    if api_key != req_api_key:
+        return Response("Unauthorized", status_code=401)
+
+    # CORS preflight
     if request.method == "OPTIONS":
         response = Response()
         response.headers["Access-Control-Allow-Origin"] = "https://gotquestions-web.vercel.app"
@@ -117,137 +122,60 @@ async def streamAnswer(request: Request):
         response.headers["Access-Control-Allow-Headers"] = "*"
         response.headers["Access-Control-Allow-Methods"] = "*"
         return response
+
+    # Parse question
     body = await request.json()
     question = body["question"]
 
-    
-    #llm = ChatOpenAI(
-        #model="mistralai/Mistral-7B-Instruct-v0.3",
-        #openai_api_base="https://westbchris--vllm-serve.modal.run/v1",
-        #openai_api_key="not-needed",
-        #temperature=0.7,
-        #streaming=True,
-    #)
-    llm=ChatOpenAI(streaming=True)
-    #import getpass
-    import os
+    # Init LLM with streaming
+    llm = ChatOpenAI(streaming=True)
 
-
-
+    # Retrieve relevant docs
+    from langchain_chroma import Chroma
     from langchain_openai import OpenAIEmbeddings
 
-    embeddings = OpenAIEmbeddings(model="text-embedding-3-large")        
-    
-    from langchain_chroma import Chroma
-
     vector_store = Chroma(
-    
-        embedding_function=embeddings,
-        persist_directory="./vectorstore",  # Where to save data locally, remove if not necessary
+        persist_directory="/vectorstore",
+        embedding_function=OpenAIEmbeddings(model="text-embedding-3-large")
     )
-    from langchain import hub
-    from langchain_community.document_loaders import WebBaseLoader
-    from langchain_core.documents import Document
-    from langchain_text_splitters import RecursiveCharacterTextSplitter
-    from typing_extensions import List, TypedDict
-    def retrieve_and_generate(state: MessagesState):
-        """Retrieve docs, then generate response with context."""
-        last_user_msg = next(
-            (m for m in reversed(state["messages"]) if m.type == "human"), None
-        )
-        query = last_user_msg.content if last_user_msg else ""
 
-        # Always retrieve
-        vector_store = Chroma(persist_directory="/vectorstore", embedding_function=OpenAIEmbeddings(model="text-embedding-3-large"))
-        results = vector_store.similarity_search_with_score(query, k=5)
-        retrieved_docs = [doc for doc, score in results if score <= 0.9]
-        # 🔥 Fallback if nothing relevant was found
-        if not retrieved_docs:
-            return {
-                "messages": [
-                    AIMessage(content="Sorry, I couldn’t find any relevant information to answer your question.")
-                ]
-            }
+    results = vector_store.similarity_search_with_score(question, k=5)
+    retrieved_docs = [doc for doc, score in results if score <= 0.9]
 
-        # Otherwise, format context
-        # Format context
-        context_str = "\n\n".join(f"Source: {doc.metadata}\nContent: {doc.page_content}" for doc in retrieved_docs)
-        system_prompt = (
-            "You are an assistant for question-answering tasks. "
-            "Use the following pieces of retrieved context to answer the question. "
-            "If you don't know the answer, say that you don't know. "
-            "Use three sentences maximum and keep the answer concise."
-            "\n\n"
-            f"{context_str}"
-        )
+    if not retrieved_docs:
+        async def fallback():
+            yield "data: Sorry, I couldn’t find any relevant information to answer your question.\n\n"
+        return StreamingResponse(fallback(), media_type="text/event-stream")
 
-        # Build prompt
-        conversation = [
-            message for message in state["messages"]
-            if message.type in ("human", "system")
-        ]
-        prompt = [SystemMessage(system_prompt)] + conversation
-        
-        response = llm.invoke(prompt)
-        return {"messages": [response]}
+    context_str = "\n\n".join(f"Source: {doc.metadata}\nContent: {doc.page_content}" for doc in retrieved_docs)
+    system_prompt = (
+        "You are an assistant for question-answering tasks. "
+        "Use the following pieces of retrieved context to answer the question. "
+        "If you don't know the answer, say that you don't know. "
+        "Use three sentences maximum and keep the answer concise.\n\n"
+        f"{context_str}"
+    )
 
+    # Final prompt
+    prompt = [
+        SystemMessage(content=system_prompt),
+        {"role": "user", "content": question}
+    ]
 
-    
-
-    graph_builder = StateGraph(MessagesState)
-    # Step 1: Generate an AIMessage that may include a tool-call to be sent.
-    
-    from langgraph.graph import END
-    
-    print("question:",question)
-    graph_builder.add_node(retrieve_and_generate)
-    
-
-
-    graph_builder.set_entry_point("retrieve_and_generate")
-    
-
-    graph_builder.add_edge("retrieve_and_generate", END)
-    
-    graph = graph_builder.compile()
-    from langgraph.checkpoint.memory import MemorySaver
-
-    memory = MemorySaver()
-    from langgraph.prebuilt import create_react_agent
-    #graph=create_react_agent(llm,[retrieve],checkpointer=memory)
-    config = {"configurable": {"thread_id": "abc123"}}
-    from fastapi.responses import StreamingResponse
     async def event_generator():
         try:
-            print("started generator.")
-            for step in graph.stream(
-    {
-        "messages": [{"role": "user", "content": question}],
-        
-    },
-    stream_mode="values",
-    config=config,
-):
-
-                print("got step.")
-                for msg in step.get("messages", []):
-                    if isinstance(msg, AIMessage):
-                        yield f"data: {msg.content}\n\n"
+            for chunk in llm.stream(prompt):
+                if chunk.content:
+                    yield f"data: {chunk.content}\n\n"
         except Exception as e:
-            print("Error in stream generator:", e)
-            # Yield an SSE-formatted error so frontend can handle it
-            yield f"data: ERROR: An internal error occurred. Please try again.\n\n"
-    
+            yield f"data: ERROR: {str(e)}\n\n"
 
-    # Stream response
     response = StreamingResponse(event_generator(), media_type="text/event-stream")
     response.headers["Access-Control-Allow-Origin"] = "https://gotquestions-web.vercel.app"
     response.headers["Access-Control-Allow-Credentials"] = "true"
     response.headers["Access-Control-Allow-Headers"] = "*"
     response.headers["Access-Control-Allow-Methods"] = "*"
     return response
-
-
 
 @app.function(
     secrets=[modal.Secret.from_name("openai-secret"),modal.Secret.from_name("api-key")],
