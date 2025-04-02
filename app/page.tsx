@@ -1,5 +1,5 @@
 "use client";
-import { appendChunkWithSmartSpacing } from "./utils/chunk";
+//import { appendChunkWithSmartSpacing } from "./utils/chunk";
 import { track } from "@vercel/analytics";
 
 import { useState, useEffect, useRef } from "react";
@@ -163,8 +163,8 @@ export default function Home() {
           while (true) {
             //@ts-ignore
             const { done, value } = await reader.read();
+
             if (done) {
-              htmlString = cleanUpPunctuationSpacing(htmlString);
               setAnswer(htmlString);
               // Generate audio if dictation is enabled
               let audioSrc: string | undefined = undefined;
@@ -187,7 +187,6 @@ export default function Home() {
               });
               break;
             }
-
             const chunk = decoder.decode(value, { stream: true });
             buffer += chunk;
 
@@ -195,34 +194,31 @@ export default function Home() {
 
             for (let i = 0; i < lines.length - 1; i++) {
               const line = lines[i].trim();
-              if (line.startsWith("data:")) {
-                const content = line.replace(/^data:\s*/, "");
-                console.log("💬 Incoming chunk:", content);
-                if (content.startsWith("ERROR:")) {
-                  setErrorMsg(content.replace("ERROR: ", ""));
-                  setIsLoading(false);
-                  setSubmittedQuestion("");
-                  return;
-                }
+              if (!line.startsWith("data:")) continue;
 
+              const content = line.replace(/^data:\s*/, "");
+
+              if (content.startsWith("ERROR:")) {
+                setErrorMsg(content.replace("ERROR: ", ""));
                 setIsLoading(false);
-
-                const spaced = appendChunkWithSmartSpacing(htmlString, content);
-                htmlString = spaced;
-                setHtml(spaced);
-
-                // Update the last message immediately with each chunk
-                setMessages((prev) => {
-                  const newMessages = [...prev];
-                  newMessages[newMessages.length - 1] = {
-                    ...newMessages[newMessages.length - 1],
-                    answer: htmlString,
-                    html: htmlString,
-                    isLoading: false,
-                  };
-                  return newMessages;
-                });
+                setSubmittedQuestion("");
+                return;
               }
+
+              // Trust GPT's output
+              htmlString += content;
+              setHtml(htmlString);
+
+              setMessages((prev) => {
+                const newMessages = [...prev];
+                newMessages[newMessages.length - 1] = {
+                  ...newMessages[newMessages.length - 1],
+                  answer: htmlString,
+                  html: htmlString,
+                  isLoading: false,
+                };
+                return newMessages;
+              });
             }
 
             buffer = lines[lines.length - 1];
