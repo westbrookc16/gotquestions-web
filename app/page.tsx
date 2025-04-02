@@ -21,7 +21,9 @@ export default function Home() {
     useState("");
   const [question, setQuestion] = useState("");
   const [submittedQuestion, setSubmittedQuestion] = useState("");
-  const [voice, setVoice] = useState("alloy");
+  const [voice, setVoice] = useState(
+    localStorage.getItem("selectedVoice") || "alloy"
+  );
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [messages, setMessages] = useState<
     Array<{
