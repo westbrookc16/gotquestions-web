@@ -152,7 +152,7 @@ async def streamAnswer(request: Request):
         "You are an assistant for question-answering tasks. "
         "Use the following pieces of retrieved context to answer the question. "
         "If you don't know the answer, say that you don't know. "
-        "Use three sentences maximum and keep the answer concise.\n\n"
+        "Use three sentences maximum and keep the answer concise. Please respond using complete sentences with proper spacing and punctuation. Do not break words across lines or stream fragments mid-word.\n\n"
         f"{context_str}"
     )
 
