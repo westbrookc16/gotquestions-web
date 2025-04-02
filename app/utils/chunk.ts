@@ -5,8 +5,11 @@ export function appendChunkWithSmartSpacing(
   if (!prev) return chunk;
   if (!chunk) return prev;
 
-  const prevEndsWithLetter = /[a-zA-Z]$/.test(prev);
-  const chunkStartsWithLetter = /^[a-zA-Z]/.test(chunk);
+  const lastChar = prev.trim().slice(-1);
+  const firstChar = chunk.trim().charAt(0);
+
+  const prevEndsWithLetter = /[a-zA-Z0-9]/.test(lastChar);
+  const chunkStartsWithLetter = /[a-zA-Z0-9]/.test(firstChar);
 
   const needsSpace = prevEndsWithLetter && chunkStartsWithLetter;
 
