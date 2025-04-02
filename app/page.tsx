@@ -52,6 +52,7 @@ export default function Home() {
       const parsed = JSON.parse(savedPreferences);
       setAudioEnabled(parsed.enabled);
       setVoice(localStorage.getItem("selectedVoice") || "alloy");
+      //alert(localStorage.getItem("selectedVoice"));
     }
   }, []);
 
