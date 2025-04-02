@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Play } from "lucide-react"
 
-const voices = ["Alloy", "Ash","Balad","Coral","Echo", "Fable", "Onyx", "Nova", "Sage","Shimmer"]
+const voices = ["Alloy", "Ash","Ballad","Coral","Echo", "Fable", "Onyx", "Nova", "Sage","Shimmer"]
 const LOCAL_STORAGE_KEY = "selectedVoice"
 
 
