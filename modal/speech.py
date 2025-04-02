@@ -32,10 +32,11 @@ async def synthesize_speech(request: Request):
         return StreamingResponse(io.BytesIO(b""), media_type="text/plain", status_code=400)
 
     openai.api_key = os.environ["OPENAI_API_KEY"]
+    voice = data.get("voice", "nova")  # Default to "nova" if not provided
 
     response = openai.audio.speech.create(
         model="tts-1",
-        voice="nova",
+        voice=voice,
         input=text,
     )
 

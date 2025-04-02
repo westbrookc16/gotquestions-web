@@ -2,7 +2,7 @@
 import { modalFetch } from "./utils/modal";
 import AudioRecording from "@/app/components/audio";
 import { track } from '@vercel/analytics';
-
+import { TTSVoiceSelect } from "./components/TTSVoiceSelect";
 
 
 import { Button } from "@/components/ui/button";
@@ -50,7 +50,8 @@ export default function Home() {
     setQuestion(text);
     setSubmittedQuestion(text);
   }
-
+//set state for the voice
+  const [voice, setVoice] = useState("alloy");
   // 1. Define your form.
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -154,6 +155,7 @@ export default function Home() {
       //setAnswer(json.content);
       setIsLoading(false);
       setSubmittedQuestion("");
+      //setAnswer("");
     }
 
     getData();
@@ -198,6 +200,7 @@ export default function Home() {
           <AudioRecording isLoading={isLoading} updateQuestion={updateQuestion} setIsLoading={setIsLoading} />
           <br />
           or<br />
+          <TTSVoiceSelect onChange={(voice) => setVoice(voice)} />
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               <FormField
@@ -218,7 +221,7 @@ export default function Home() {
             </form>
           </Form>
           {isLoading && <LoadingOverlay />}
-          <Content text={question} html={html} answer={answer} setLoading={setIsLoading} isLoading={isLoading} sources={errorMsg !== "" ? [] : sources} />
+          <Content text={question} html={html} answer={answer} setLoading={setIsLoading} isLoading={isLoading} sources={errorMsg !== "" ? [] : sources} voice={voice} />
           <br />
           <div aria-live="assertive">{errorMsg && <div className="text-red-500">{errorMsg}</div>}</div>
           If you are technical and wish to view the github repository, it is located <a href="https://github.com/westbrookc16/gotquestions-web">here.</a>

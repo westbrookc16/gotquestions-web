@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 //import Speech from "@/app/components/speech";
 import TextToSpeech from "@/app/components/speech";
-const Content = ({ html, answer, text, setLoading, isLoading, sources }: { sources: any, text: string, answer: string, html: string, setLoading: Function, isLoading: boolean }) => {
+const Content = ({ html, answer, text, setLoading, isLoading, sources, voice }: { voice: string, sources: any, text: string, answer: string, html: string, setLoading: Function, isLoading: boolean }) => {
     return (
         <div>
             {text}<br />
@@ -12,14 +12,14 @@ const Content = ({ html, answer, text, setLoading, isLoading, sources }: { sourc
             {!isLoading && (sources.length !== 0) && (<div>
                 <br />Sources
                 <ul className="list-disc list-inside">
-                    {sources.map((source:any, index:any) => (
+                    {sources.map((source: any, index: any) => (
                         <li key={index}>
                             <a href={source.url} target="_blank" rel="noopener noreferrer">{source.question}</a>
                         </li>
                     ))}
-            </ul>
+                </ul>
             </div>)}<br />
-            <TextToSpeech text={answer ? answer : ""} setLoading={setLoading} />
+            <TextToSpeech text={answer ? answer : ""} setLoading={setLoading} voice={voice} />
         </div>
     );
 }

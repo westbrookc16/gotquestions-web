@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { modalFetch } from "../utils/modal";
 
-export default function TextToSpeech({ text, setLoading }: { text: String, setLoading: Function }) {
+export default function TextToSpeech({ voice, text, setLoading }: { voice: string, text: String, setLoading: Function }) {
   const [audioSrc, setAudioSrc] = useState("");
   const audioRef = useRef(null);
 
@@ -10,10 +10,10 @@ export default function TextToSpeech({ text, setLoading }: { text: String, setLo
     //alert(text);
     //setLoading(true);
     try {
-      
-      const response = await fetch("/api/textToSpeech", {body: JSON.stringify({ text }), method: "POST", headers: { "Content-Type": "application/json" } });
-    
-    
+
+      const response = await fetch("/api/textToSpeech", { body: JSON.stringify({ text,voice }), method: "POST", headers: { "Content-Type": "application/json" } });
+
+
 
       if (!response.ok) throw new Error("Failed to generate audio");
 
