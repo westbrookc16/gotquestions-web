@@ -190,14 +190,18 @@ export default function Home() {
             const chunk = decoder.decode(value, { stream: true });
             buffer += chunk;
 
-            const lines = buffer.split("\n\n");
+            const lines = buffer.split("\n");
 
-            for (let i = 0; i < lines.length - 1; i++) {
-              const line = lines[i].trim();
-              if (!line.startsWith("data:")) continue;
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (trimmed === "" || !trimmed.startsWith("data:")) continue;
 
-              const content = line.replace(/^data:\s*/, "");
-
+              const content = trimmed.replace(/^data:\s*/, "");
+              if (content === "[DONE]") {
+                setIsLoading(false);
+                setSubmittedQuestion("");
+                return;
+              }
               if (content.startsWith("ERROR:")) {
                 setErrorMsg(content.replace("ERROR: ", ""));
                 setIsLoading(false);
@@ -221,7 +225,7 @@ export default function Home() {
               });
             }
 
-            buffer = lines[lines.length - 1];
+            buffer = buffer.endsWith("\n") ? "" : lines[lines.length - 1];
           }
           break;
         } catch (err) {
