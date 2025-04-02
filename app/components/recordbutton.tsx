@@ -1,24 +1,41 @@
 "use client";
 
-import { track } from '@vercel/analytics';
-import { Button } from '@/components/ui/button';
+import { track } from "@vercel/analytics";
+import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Mic, Square } from "lucide-react";
 
-const RecordButton = ({ permissionRequested, isLoading, recording, startRecording, stopRecording, errorMessage }: {
-  permissionRequested: boolean,
-  isLoading: boolean,
-  recording: string,
-  startRecording: Function,
-  stopRecording: Function,
-  errorMessage: string | null
+const RecordButton = ({
+  permissionRequested,
+  isLoading,
+  recording,
+  startRecording,
+  stopRecording,
+  errorMessage,
+  recordButtonClicked,
+}: {
+  permissionRequested: boolean;
+  recordButtonClicked: boolean;
+  isLoading: boolean;
+  recording: string;
+  startRecording: Function;
+  stopRecording: Function;
+  errorMessage: string | null;
 }) => {
-  const label = (permissionRequested: boolean, recording: string, isLoading: boolean) => {
-    if (isLoading) return "Recognising audio...";
+  //const [recordButtonClicked, setRecordButtonClicked] = useState(false);
+  const label = (
+    permissionRequested: boolean,
+    recording: string,
+    isLoading: boolean,
+    recordButtonClicked: boolean
+  ) => {
+    if (isLoading && recordButtonClicked) return "Recognising audio...";
     if (!permissionRequested) return "Grant Permission";
     if (recording === "error") return "Start Recording";
-    return (recording === "stopped" || recording === "idle") ? "Start Recording" : "Stop Recording";
-  }
+    return recording === "stopped" || recording === "idle"
+      ? "Start Recording"
+      : "Stop Recording";
+  };
 
   return (
     <div className="flex flex-col items-center gap-2 relative">
@@ -30,6 +47,7 @@ const RecordButton = ({ permissionRequested, isLoading, recording, startRecordin
             track("audio");
           } else {
             startRecording();
+            //setRecordButtonClicked(true);
           }
         }}
         variant={recording === "recording" ? "destructive" : "default"}
@@ -42,11 +60,20 @@ const RecordButton = ({ permissionRequested, isLoading, recording, startRecordin
         ) : (
           <Mic className="h-4 w-4 mr-2" />
         )}
-        <span aria-live="polite">{label(permissionRequested, recording, isLoading)}</span>
+        <span aria-live="polite">
+          {label(
+            permissionRequested,
+            recording,
+            isLoading,
+            recordButtonClicked
+          )}
+        </span>
       </Button>
       <div className="text-sm text-muted-foreground h-5">
         {recording === "recording" && "Recording in progress..."}
-        {errorMessage && <span className="text-destructive">{errorMessage}</span>}
+        {errorMessage && (
+          <span className="text-destructive">{errorMessage}</span>
+        )}
       </div>
     </div>
   );
