@@ -5,14 +5,23 @@ export function appendChunkWithSmartSpacing(
   if (!prev) return chunk;
   if (!chunk) return prev;
 
-  // Get the last visible char from `prev` (ignoring trailing tags/space)
-  const lastVisibleChar = [...prev].reverse().find((c) => /\S/.test(c)) ?? "";
-  const firstChar = chunk.trimStart().charAt(0);
+  const trimmedChunk = chunk.trimStart();
 
-  const lastIsAlphaNum = /[a-zA-Z0-9]/.test(lastVisibleChar);
-  const firstIsAlphaNum = /[a-zA-Z0-9]/.test(firstChar);
+  const lastChar = prev.slice(-1);
+  const firstChar = trimmedChunk.charAt(0);
 
-  const needsSpace = lastIsAlphaNum && firstIsAlphaNum;
+  const hasTrailingSpace = lastChar === " ";
+  const hasLeadingSpace = chunk.charAt(0) === " ";
 
-  return prev + (needsSpace ? " " : "") + chunk;
+  // Rules for when to add a space
+  const shouldAddSpace =
+    // e.g. "word" + "next"
+    (/[a-zA-Z0-9]/.test(lastChar) && /[a-zA-Z0-9]/.test(firstChar)) ||
+    // e.g. "." + "Next"
+    (/[.?!]/.test(lastChar) && /[A-Z]/.test(firstChar));
+
+  const spacer =
+    !hasTrailingSpace && !hasLeadingSpace && shouldAddSpace ? " " : "";
+
+  return prev + spacer + chunk;
 }

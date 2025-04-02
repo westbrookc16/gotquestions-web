@@ -61,6 +61,11 @@ export default function Home() {
       JSON.stringify({ enabled: audioEnabled })
     );
   }, [audioEnabled]);
+  function cleanUpPunctuationSpacing(text: string): string {
+    return text
+      .replace(/\s+([.,!?;:])/g, "$1") // remove space before punctuation
+      .replace(/([.,!?])([^\s])/g, "$1 $2"); // ensure space after punctuation
+  }
 
   const handleEnabledChange = (enabled: boolean) => {
     setAudioEnabled(enabled);
@@ -159,6 +164,7 @@ export default function Home() {
             //@ts-ignore
             const { done, value } = await reader.read();
             if (done) {
+              htmlString = cleanUpPunctuationSpacing(htmlString);
               setAnswer(htmlString);
               // Generate audio if dictation is enabled
               let audioSrc: string | undefined = undefined;
