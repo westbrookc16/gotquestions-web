@@ -152,7 +152,7 @@ export default function Home() {
           const decoder = new TextDecoder("utf-8");
 
           let buffer = "";
-
+          let tempChunk = "";
           while (true) {
             //@ts-ignore
             const { done, value } = await reader.read();
@@ -198,28 +198,36 @@ export default function Home() {
                 }
 
                 setIsLoading(false);
-                const spacedChunk = appendChunkWithSmartSpacing(
-                  htmlString,
-                  content
-                );
-                htmlString = spacedChunk;
-                setHtml(spacedChunk);
-                lastChar = content.at(-1) ?? "";
 
-                // Update the last message immediately with each chunk
-                setMessages((prev) => {
-                  const newMessages = [...prev];
-                  newMessages[newMessages.length - 1] = {
-                    ...newMessages[newMessages.length - 1],
-                    answer: htmlString,
-                    html: htmlString,
-                    isLoading: false,
-                  };
-                  return newMessages;
-                });
+                // Append new content to temp buffer
+                tempChunk += content;
+
+                // Check if the current tempChunk probably ends a sentence or word
+                const safeToAppend = /[\s\.\,\?\!\)]$/.test(tempChunk);
+
+                if (safeToAppend) {
+                  const spaced = appendChunkWithSmartSpacing(
+                    htmlString,
+                    tempChunk
+                  );
+                  htmlString = spaced;
+                  setHtml(spaced);
+                  tempChunk = "";
+
+                  // Update the last message immediately with each chunk
+                  setMessages((prev) => {
+                    const newMessages = [...prev];
+                    newMessages[newMessages.length - 1] = {
+                      ...newMessages[newMessages.length - 1],
+                      answer: htmlString,
+                      html: htmlString,
+                      isLoading: false,
+                    };
+                    return newMessages;
+                  });
+                }
               }
             }
-
             buffer = lines[lines.length - 1];
           }
           break;
