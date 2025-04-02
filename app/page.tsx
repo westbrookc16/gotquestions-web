@@ -1,5 +1,6 @@
 "use client";
-import { track } from '@vercel/analytics';
+import { appendChunkWithSmartSpacing } from "./utils/chunk";
+import { track } from "@vercel/analytics";
 
 import { useState, useEffect, useRef } from "react";
 import Content from "@/app/components/content";
@@ -16,12 +17,23 @@ const formSchema = z.object({
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
-  const [screenReaderLoadingMessage, setScreenReaderLoadingMessage] = useState("");
+  const [screenReaderLoadingMessage, setScreenReaderLoadingMessage] =
+    useState("");
   const [question, setQuestion] = useState("");
   const [submittedQuestion, setSubmittedQuestion] = useState("");
   const [voice, setVoice] = useState("alloy");
   const [audioEnabled, setAudioEnabled] = useState(false);
-  const [messages, setMessages] = useState<Array<{ question: string, answer: string, html: string, sources: any[], isLoading: boolean, isFetchingSources: boolean, audioSrc?: string }>>([]);
+  const [messages, setMessages] = useState<
+    Array<{
+      question: string;
+      answer: string;
+      html: string;
+      sources: any[];
+      isLoading: boolean;
+      isFetchingSources: boolean;
+      audioSrc?: string;
+    }>
+  >([]);
   const mainRef = useRef<HTMLDivElement>(null);
 
   // Scroll to bottom whenever messages change
@@ -42,7 +54,10 @@ export default function Home() {
 
   // Save dictation preferences to localStorage
   useEffect(() => {
-    localStorage.setItem("dictationPreferences", JSON.stringify({ enabled: audioEnabled }));
+    localStorage.setItem(
+      "dictationPreferences",
+      JSON.stringify({ enabled: audioEnabled })
+    );
   }, [audioEnabled]);
 
   const handleEnabledChange = (enabled: boolean) => {
@@ -50,14 +65,17 @@ export default function Home() {
   };
 
   // Generate audio for a message
-  const generateAudio = async (answer: string, voice: string): Promise<string | undefined> => {
+  const generateAudio = async (
+    answer: string,
+    voice: string
+  ): Promise<string | undefined> => {
     if (!answer || !audioEnabled) return undefined;
 
     try {
       const response = await fetch("/api/textToSpeech", {
         body: JSON.stringify({ text: answer, voice }),
         method: "POST",
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
       });
 
       if (!response.ok) throw new Error("Failed to generate audio");
@@ -73,14 +91,14 @@ export default function Home() {
   const updateQuestion = (text: string) => {
     setQuestion(text);
     setSubmittedQuestion(text);
-  }
+  };
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       question: "",
     },
-  })
+  });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     console.log(values);
@@ -106,18 +124,25 @@ export default function Home() {
       let response;
 
       // Add the new message with loading state
-      setMessages(prev => [...prev, {
-        question: submittedQuestion,
-        answer: "",
-        html: "",
-        sources: [],
-        isLoading: true,
-        isFetchingSources: false
-      }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          question: submittedQuestion,
+          answer: "",
+          html: "",
+          sources: [],
+          isLoading: true,
+          isFetchingSources: false,
+        },
+      ]);
 
       while (attempt < maxAttempts) {
         try {
-          response = await fetch("/api/ask", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: submittedQuestion }) });
+          response = await fetch("/api/ask", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question: submittedQuestion }),
+          });
 
           if (!response.ok) throw new Error(`HTTP error ${response.status}`);
 
@@ -141,14 +166,14 @@ export default function Home() {
                 setIsGeneratingAudio(false);
               }
               // Update the last message with the answer and audio
-              setMessages(prev => {
+              setMessages((prev) => {
                 const newMessages = [...prev];
                 newMessages[newMessages.length - 1] = {
                   ...newMessages[newMessages.length - 1],
                   answer: htmlString,
                   html: htmlString,
                   isLoading: false,
-                  audioSrc
+                  audioSrc,
                 };
                 return newMessages;
               });
@@ -172,26 +197,23 @@ export default function Home() {
                   return;
                 }
 
-                setIsLoading(false)
-                const firstChar = content[0];
-                const needsSpace =
-                  lastChar &&
-                  ![" ", "\n"].includes(lastChar) &&
-                  ![" ", ".", ",", "!", "?", "'", "\n"].includes(firstChar);
-
-                const spacedChunk = (needsSpace ? " " : "") + content;
-                setHtml((prev) => prev + spacedChunk);
-                htmlString += spacedChunk;
+                setIsLoading(false);
+                const spacedChunk = appendChunkWithSmartSpacing(
+                  htmlString,
+                  content
+                );
+                htmlString = spacedChunk;
+                setHtml(spacedChunk);
                 lastChar = content.at(-1) ?? "";
 
                 // Update the last message immediately with each chunk
-                setMessages(prev => {
+                setMessages((prev) => {
                   const newMessages = [...prev];
                   newMessages[newMessages.length - 1] = {
                     ...newMessages[newMessages.length - 1],
                     answer: htmlString,
                     html: htmlString,
-                    isLoading: false
+                    isLoading: false,
                   };
                   return newMessages;
                 });
@@ -227,25 +249,29 @@ export default function Home() {
       if (submittedQuestion === "" || errorMsg !== "") return;
 
       // Update the last message to show sources are loading
-      setMessages(prev => {
+      setMessages((prev) => {
         const newMessages = [...prev];
         newMessages[newMessages.length - 1] = {
           ...newMessages[newMessages.length - 1],
-          isFetchingSources: true
+          isFetchingSources: true,
         };
         return newMessages;
       });
 
-      const res = await fetch("/api/getsources", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: submittedQuestion }) });
+      const res = await fetch("/api/getsources", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: submittedQuestion }),
+      });
       const json = await res.json();
       setSources(json.sources);
       // Update the last message with the sources and mark as not loading
-      setMessages(prev => {
+      setMessages((prev) => {
         const newMessages = [...prev];
         newMessages[newMessages.length - 1] = {
           ...newMessages[newMessages.length - 1],
           sources: json.sources,
-          isFetchingSources: false
+          isFetchingSources: false,
         };
         return newMessages;
       });
@@ -261,14 +287,19 @@ export default function Home() {
       let toggle = false;
       intervalId = setInterval(() => {
         toggle = !toggle;
-        setScreenReaderLoadingMessage(toggle ? "Still loading, please wait..." : "Generating your answer...");
+        setScreenReaderLoadingMessage(
+          toggle ? "Still loading, please wait..." : "Generating your answer..."
+        );
       }, 10000);
     } else {
       setScreenReaderLoadingMessage("");
       if (intervalId) clearInterval(intervalId);
     }
 
-    return () => { setScreenReaderLoadingMessage(""); if (intervalId) clearInterval(intervalId); }
+    return () => {
+      setScreenReaderLoadingMessage("");
+      if (intervalId) clearInterval(intervalId);
+    };
   }, [isLoading]);
 
   return (
@@ -277,8 +308,18 @@ export default function Home() {
         <div className="container mx-auto px-4 py-4 max-w-4xl">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold mb-2">GotQuestions Assistant</h1>
-              <p className="text-muted-foreground">Ask questions and get answers from <a href="https://www.gotquestions.org/" className="text-primary hover:underline">GotQuestions.org</a></p>
+              <h1 className="text-3xl font-bold mb-2">
+                GotQuestions Assistant
+              </h1>
+              <p className="text-muted-foreground">
+                Ask questions and get answers from{" "}
+                <a
+                  href="https://www.gotquestions.org/"
+                  className="text-primary hover:underline"
+                >
+                  GotQuestions.org
+                </a>
+              </p>
             </div>
             <div className="flex items-center">
               <ThemeToggle />
@@ -305,7 +346,9 @@ export default function Home() {
                   audioEnabled={audioEnabled}
                   onVoiceChange={(newVoice) => setVoice(newVoice)}
                   audioSrc={msg.audioSrc}
-                  isGeneratingAudio={isGeneratingAudio && index === messages.length - 1}
+                  isGeneratingAudio={
+                    isGeneratingAudio && index === messages.length - 1
+                  }
                 />
               ))}
             </div>
@@ -358,10 +401,19 @@ export default function Home() {
       <footer className="sticky bottom-0 bg-background ">
         <div className="container mx-auto px-4 py-2 mb-2 max-w-4xl">
           <p className="text-sm text-muted-foreground/60 text-center">
-            Please note that this answer is read by an AI voice and not by a human.
+            Please note that this answer is read by an AI voice and not by a
+            human.
           </p>
           <p className="text-sm mv-2 text-muted-foreground/60 text-center">
-            If you are technical and wish to view the github repository, it is located <a href="https://github.com/jason-m-hicks/gotquestions-assistant" className="text-primary hover:underline">here</a>.
+            If you are technical and wish to view the github repository, it is
+            located{" "}
+            <a
+              href="https://github.com/jason-m-hicks/gotquestions-assistant"
+              className="text-primary hover:underline"
+            >
+              here
+            </a>
+            .
           </p>
         </div>
       </footer>
