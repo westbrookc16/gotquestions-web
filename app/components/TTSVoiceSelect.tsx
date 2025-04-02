@@ -70,6 +70,21 @@ export function TTSVoiceSelect({
         ))}
       </SelectContent>
     </Select>
+    <Button onClick={async(e)=>{
+if (playing) return
+if (!voice) return
+setPlaying(voice)
+const res=await fetch(`/api/textToSpeech`, { method: "POST", body: JSON.stringify({ text: "Hello, this is a preview of the voice.", voice }) })
+const audioBlob = await res.blob()
+const audioURL = URL.createObjectURL(audioBlob)
+const audio = new Audio(audioURL)
+audio.play()
+setPlaying(voice)
+audio.onended = () => setPlaying(null)
+audio.onerror = () => setPlaying(null)
+
+
+    }}>Play Preview</Button>
     </div>
   )
 }
