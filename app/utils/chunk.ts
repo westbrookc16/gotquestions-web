@@ -5,13 +5,14 @@ export function appendChunkWithSmartSpacing(
   if (!prev) return chunk;
   if (!chunk) return prev;
 
-  const lastChar = prev.trim().slice(-1);
-  const firstChar = chunk.trim().charAt(0);
+  // Get the last visible char from `prev` (ignoring trailing tags/space)
+  const lastVisibleChar = [...prev].reverse().find((c) => /\S/.test(c)) ?? "";
+  const firstChar = chunk.trimStart().charAt(0);
 
-  const prevEndsWithLetter = /[a-zA-Z0-9]/.test(lastChar);
-  const chunkStartsWithLetter = /[a-zA-Z0-9]/.test(firstChar);
+  const lastIsAlphaNum = /[a-zA-Z0-9]/.test(lastVisibleChar);
+  const firstIsAlphaNum = /[a-zA-Z0-9]/.test(firstChar);
 
-  const needsSpace = prevEndsWithLetter && chunkStartsWithLetter;
+  const needsSpace = lastIsAlphaNum && firstIsAlphaNum;
 
   return prev + (needsSpace ? " " : "") + chunk;
 }
