@@ -1,58 +1,80 @@
 "use client";
-import { modalFetch } from "./utils/modal";
-import AudioRecording from "@/app/components/audio";
 import { track } from '@vercel/analytics';
-import { TTSVoiceSelect } from "./components/TTSVoiceSelect";
 
-
-import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
-import Image from "next/image";
-import RecordButton from "@/app/components/recordbutton";
+import { useState, useEffect, useRef } from "react";
 import Content from "@/app/components/content";
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { LoadingOverlay } from "./components/spinner";
-
-
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import DictationSettings from "./components/DictationSettings";
+import QuestionInput from "./components/QuestionInput";
+import { ThemeToggle } from "./components/ThemeToggle";
 
 const formSchema = z.object({
   question: z.string().nonempty("Question must be a string"),
 });
 
-
 export default function Home() {
-
-
   const [isLoading, setIsLoading] = useState(false);
-
   const [screenReaderLoadingMessage, setScreenReaderLoadingMessage] = useState("");
-
-
-
   const [question, setQuestion] = useState("");
   const [submittedQuestion, setSubmittedQuestion] = useState("");
+  const [voice, setVoice] = useState("alloy");
+  const [audioEnabled, setAudioEnabled] = useState(false);
+  const [messages, setMessages] = useState<Array<{ question: string, answer: string, html: string, sources: any[], isLoading: boolean, isFetchingSources: boolean, audioSrc?: string }>>([]);
+  const mainRef = useRef<HTMLDivElement>(null);
 
+  // Scroll to bottom whenever messages change
+  useEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.scrollTop = mainRef.current.scrollHeight;
+    }
+  }, [messages]);
 
+  // Load dictation preferences from localStorage
+  useEffect(() => {
+    const savedPreferences = localStorage.getItem("dictationPreferences");
+    if (savedPreferences) {
+      const parsed = JSON.parse(savedPreferences);
+      setAudioEnabled(parsed.enabled);
+    }
+  }, []);
+
+  // Save dictation preferences to localStorage
+  useEffect(() => {
+    localStorage.setItem("dictationPreferences", JSON.stringify({ enabled: audioEnabled }));
+  }, [audioEnabled]);
+
+  const handleEnabledChange = (enabled: boolean) => {
+    setAudioEnabled(enabled);
+  };
+
+  // Generate audio for a message
+  const generateAudio = async (answer: string, voice: string): Promise<string | undefined> => {
+    if (!answer || !audioEnabled) return undefined;
+
+    try {
+      const response = await fetch("/api/textToSpeech", {
+        body: JSON.stringify({ text: answer, voice }),
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+
+      if (!response.ok) throw new Error("Failed to generate audio");
+
+      const audioBlob = await response.blob();
+      return URL.createObjectURL(audioBlob);
+    } catch (error) {
+      console.error("Error generating speech:", error);
+      return undefined;
+    }
+  };
 
   const updateQuestion = (text: string) => {
     setQuestion(text);
     setSubmittedQuestion(text);
   }
-//set state for the voice
-  const [voice, setVoice] = useState("alloy");
-  // 1. Define your form.
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -60,25 +82,19 @@ export default function Home() {
     },
   })
 
-  // 2. Define a submit handler.
   function onSubmit(values: z.infer<typeof formSchema>) {
-    // Do something with the form values.
-    // ✅ This will be type-safe and validated.
     console.log(values);
     if (isLoading) return;
     track("text");
-    //setIsLoading(true);
     setQuestion(values["question"]);
     setSubmittedQuestion(values["question"]);
-    //values["question"] = "";
-    //form.reset();
   }
 
   const [html, setHtml] = useState("");
   const [answer, setAnswer] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
   useEffect(() => {
-    //get data from api
     async function getData() {
       if (submittedQuestion === "") return;
       setIsLoading(true);
@@ -89,15 +105,24 @@ export default function Home() {
       let attempt = 0;
       let response;
 
+      // Add the new message with loading state
+      setMessages(prev => [...prev, {
+        question: submittedQuestion,
+        answer: "",
+        html: "",
+        sources: [],
+        isLoading: true,
+        isFetchingSources: false
+      }]);
+
       while (attempt < maxAttempts) {
         try {
           response = await fetch("/api/ask", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: submittedQuestion }) });
 
           if (!response.ok) throw new Error(`HTTP error ${response.status}`);
 
-
-          form.reset();
-          // 🔥 Stream the body chunk by chunk
+          setQuestion("");
+          let lastChar = "";
           const reader = response.body?.getReader();
           const decoder = new TextDecoder("utf-8");
 
@@ -106,12 +131,33 @@ export default function Home() {
           while (true) {
             //@ts-ignore
             const { done, value } = await reader.read();
-            if (done) { setAnswer(htmlString); break; }
+            if (done) {
+              setAnswer(htmlString);
+              // Generate audio if dictation is enabled
+              let audioSrc: string | undefined = undefined;
+              if (audioEnabled) {
+                setIsGeneratingAudio(true);
+                audioSrc = await generateAudio(htmlString, voice);
+                setIsGeneratingAudio(false);
+              }
+              // Update the last message with the answer and audio
+              setMessages(prev => {
+                const newMessages = [...prev];
+                newMessages[newMessages.length - 1] = {
+                  ...newMessages[newMessages.length - 1],
+                  answer: htmlString,
+                  html: htmlString,
+                  isLoading: false,
+                  audioSrc
+                };
+                return newMessages;
+              });
+              break;
+            }
 
             const chunk = decoder.decode(value, { stream: true });
             buffer += chunk;
 
-            // Parse SSE-style lines: "data: ...\n\n"
             const lines = buffer.split("\n\n");
 
             for (let i = 0; i < lines.length - 1; i++) {
@@ -125,17 +171,36 @@ export default function Home() {
                   setSubmittedQuestion("");
                   return;
                 }
-                // Do something with `content`, like append it to a chat window
-                setHtml((prev) => prev + content);
-                htmlString += content;
-              }
 
+                setIsLoading(false)
+                const firstChar = content[0];
+                const needsSpace =
+                  lastChar &&
+                  ![" ", "\n"].includes(lastChar) &&
+                  ![" ", ".", ",", "!", "?", "'", "\n"].includes(firstChar);
+
+                const spacedChunk = (needsSpace ? " " : "") + content;
+                setHtml((prev) => prev + spacedChunk);
+                htmlString += spacedChunk;
+                lastChar = content.at(-1) ?? "";
+
+                // Update the last message immediately with each chunk
+                setMessages(prev => {
+                  const newMessages = [...prev];
+                  newMessages[newMessages.length - 1] = {
+                    ...newMessages[newMessages.length - 1],
+                    answer: htmlString,
+                    html: htmlString,
+                    isLoading: false
+                  };
+                  return newMessages;
+                });
+              }
             }
 
-            // Keep only the incomplete buffer at the end
             buffer = lines[lines.length - 1];
           }
-          break; // Success — break out of retry loop
+          break;
         } catch (err) {
           attempt++;
           if (attempt >= maxAttempts) {
@@ -145,47 +210,61 @@ export default function Home() {
             setSubmittedQuestion("");
             return;
           }
-          // Optional: small delay before retrying
           await new Promise((resolve) => setTimeout(resolve, 500));
         }
       }
 
-
-      //setHtml(json.content + "<br/>" + "Sources:<brs/>" + json.sources);
-      //setAnswer(json.content);
       setIsLoading(false);
       setSubmittedQuestion("");
-      //setAnswer("");
     }
 
     getData();
   }, [submittedQuestion]);
+
   const [sources, setSources] = useState([]);
   useEffect(() => {
     async function getData() {
       if (submittedQuestion === "" || errorMsg !== "") return;
+
+      // Update the last message to show sources are loading
+      setMessages(prev => {
+        const newMessages = [...prev];
+        newMessages[newMessages.length - 1] = {
+          ...newMessages[newMessages.length - 1],
+          isFetchingSources: true
+        };
+        return newMessages;
+      });
+
       const res = await fetch("/api/getsources", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: submittedQuestion }) });
       const json = await res.json();
       setSources(json.sources);
-
+      // Update the last message with the sources and mark as not loading
+      setMessages(prev => {
+        const newMessages = [...prev];
+        newMessages[newMessages.length - 1] = {
+          ...newMessages[newMessages.length - 1],
+          sources: json.sources,
+          isFetchingSources: false
+        };
+        return newMessages;
+      });
     }
     getData();
-
   }, [submittedQuestion]);
+
   useEffect(() => {
     let intervalId: NodeJS.Timeout | undefined;
 
     if (isLoading) {
-      // Announce immediately
       setScreenReaderLoadingMessage("Answer is loading...");
       let toggle = false;
       intervalId = setInterval(() => {
         toggle = !toggle;
         setScreenReaderLoadingMessage(toggle ? "Still loading, please wait..." : "Generating your answer...");
-      }, 10000); // every 10 seconds
+      }, 10000);
     } else {
-      setScreenReaderLoadingMessage(""); // clear message
-
+      setScreenReaderLoadingMessage("");
       if (intervalId) clearInterval(intervalId);
     }
 
@@ -193,43 +272,99 @@ export default function Home() {
   }, [isLoading]);
 
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <div>
-          To use this chat bot, first grant this page permission to use the microphone and start the recording by clicking the start button. When you're done click the button again and you will see the text of your question and then the answer. Alternatively, you can type a question into the edit field and click submit. After that you will here the answer read aloud. Please note that this answer is read by an AI voice and not by a human. Seems obvious, but I have to put that disclaimore in to use the voices.<br />Data pulled from <a href="https://www.gotquestions.org/">GotQuestions.org</a>.<br />
-          <AudioRecording isLoading={isLoading} updateQuestion={updateQuestion} setIsLoading={setIsLoading} />
-          <br />
-          or<br />
-          <TTSVoiceSelect onChange={(voice) => setVoice(voice)} />
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <FormField
-                control={form.control}
-                name="question"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Question</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ask a Question" {...field} />
-                    </FormControl>
-
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit">Submit</Button>
-            </form>
-          </Form>
-          {isLoading && <LoadingOverlay />}
-          <Content text={question} html={html} answer={answer} setLoading={setIsLoading} isLoading={isLoading} sources={errorMsg !== "" ? [] : sources} voice={voice} />
-          <br />
-          <div aria-live="assertive">{errorMsg && <div className="text-red-500">{errorMsg}</div>}</div>
-          If you are technical and wish to view the github repository, it is located <a href="https://github.com/westbrookc16/gotquestions-web">here.</a>
+    <div className="h-screen flex flex-col overflow-hidden">
+      <header className="sticky top-0 z-10 bg-background border-b">
+        <div className="container mx-auto px-4 py-4 max-w-4xl">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">GotQuestions Assistant</h1>
+              <p className="text-muted-foreground">Ask questions and get answers from <a href="https://www.gotquestions.org/" className="text-primary hover:underline">GotQuestions.org</a></p>
+            </div>
+            <div className="flex items-center">
+              <ThemeToggle />
+            </div>
+          </div>
         </div>
+      </header>
 
-        <div aria-live="polite" className="sr-only">{screenReaderLoadingMessage}</div>
+      <main className="flex-1 overflow-y-auto" ref={mainRef}>
+        <div className="container mx-auto px-4 py-4 max-w-4xl">
+          {messages.length > 0 && (
+            <div className="space-y-8">
+              {messages.map((msg, index) => (
+                <Content
+                  key={index}
+                  text={msg.question}
+                  html={msg.html}
+                  answer={msg.answer}
+                  setLoading={setIsLoading}
+                  isLoading={msg.isLoading}
+                  isFetchingSources={msg.isFetchingSources}
+                  sources={errorMsg !== "" ? [] : msg.sources}
+                  voice={voice}
+                  audioEnabled={audioEnabled}
+                  onVoiceChange={(newVoice) => setVoice(newVoice)}
+                  audioSrc={msg.audioSrc}
+                  isGeneratingAudio={isGeneratingAudio && index === messages.length - 1}
+                />
+              ))}
+            </div>
+          )}
+
+          {errorMsg && (
+            <div className="mt-4 p-4 bg-destructive/10 text-destructive rounded-md">
+              {errorMsg}
+            </div>
+          )}
+
+          {!(answer || question) && messages.length === 0 && (
+            <div className="flex items-center justify-center min-h-[calc(100vh-16rem)]">
+              <div className="p-6 space-y-6 w-full max-w-2xl">
+                <div className="space-y-4">
+                  <QuestionInput
+                    onSubmit={onSubmit}
+                    updateQuestion={updateQuestion}
+                    setIsLoading={setIsLoading}
+                    isLoading={isLoading}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </main>
 
+      <div className="container mx-auto px-10 py-4 max-w-4xl">
+        <div className="space-y-4">
+          {(answer || messages.length > 0) && (
+            <QuestionInput
+              onSubmit={onSubmit}
+              updateQuestion={updateQuestion}
+              setIsLoading={setIsLoading}
+              isLoading={isLoading}
+            />
+          )}
+
+          <div className="space-y-4">
+            <DictationSettings
+              enabled={audioEnabled}
+              voice={voice}
+              onEnabledChange={handleEnabledChange}
+              onVoiceChange={(newVoice) => setVoice(newVoice)}
+            />
+          </div>
+        </div>
+      </div>
+      <footer className="sticky bottom-0 bg-background ">
+        <div className="container mx-auto px-4 py-2 mb-2 max-w-4xl">
+          <p className="text-sm text-muted-foreground/60 text-center">
+            Please note that this answer is read by an AI voice and not by a human.
+          </p>
+          <p className="text-sm mv-2 text-muted-foreground/60 text-center">
+            If you are technical and wish to view the github repository, it is located <a href="https://github.com/jason-m-hicks/gotquestions-assistant" className="text-primary hover:underline">here</a>.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

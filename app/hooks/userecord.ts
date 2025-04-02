@@ -8,14 +8,14 @@ export const useAudioRecorder = () => {
   const [status, setStatus] = useState<RecorderStatus>("idle");
   const [audioURL, setAudioURL] = useState<string | null>(null);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     return () => {
-      if (mediaRecorderRef.current?.state !== "inactive") {
-        //@ts-ignore
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
         mediaRecorderRef.current.stop();
       }
     };
@@ -51,19 +51,29 @@ export const useAudioRecorder = () => {
   const requestMicrophone = async (): Promise<MediaStream | null> => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setErrorMessage(null);
       return stream;
-    } catch (err) {
+    } catch (err: any) {
       Sentry.captureException("Microphone permission denied or error:" + err);
       setStatus("error");
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setErrorMessage("Microphone access was denied. Please enable microphone access in your browser settings to use voice recording.");
+      } else {
+        setErrorMessage("Failed to access microphone. Please check your microphone settings and try again.");
+      }
       return null;
     }
   };
 
   const startRecording = async () => {
     if (status === "recording") return;
+    setErrorMessage(null);
 
     const stream = await requestMicrophone();
-    if (!stream) return;
+    if (!stream) {
+      setStatus("error");
+      return;
+    }
     const mimeType = getSupportedMimeType();
     const recorder = new MediaRecorder(stream, { mimeType: mimeType });
     mediaRecorderRef.current = recorder;
@@ -102,6 +112,7 @@ export const useAudioRecorder = () => {
     setStatus("idle");
     setAudioURL(null);
     setAudioBlob(null);
+    setErrorMessage(null);
     audioChunksRef.current = [];
     mediaRecorderRef.current = null;
   };
@@ -110,6 +121,7 @@ export const useAudioRecorder = () => {
     status,
     audioURL,
     audioBlob,
+    errorMessage,
     startRecording,
     stopRecording,
     resetRecording,
