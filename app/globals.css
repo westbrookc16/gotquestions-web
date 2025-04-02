@@ -116,7 +116,28 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+}
+
+@keyframes ellipsis {
+  0% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.3;
+  }
+}
+
+.animate-ellipsis::after {
+  content: '...';
+  display: inline-block;
+  animation: ellipsis 1.5s infinite;
 }

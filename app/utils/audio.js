@@ -4,15 +4,16 @@ import { modalFetch } from "./modal";
 export async function sendAudioToWhisper(audioBlob) {
   console.log("Detected audio type:", audioBlob.type); // e.g. "audio/webm", "audio/wav"
 
-  const response = await fetch("/api/text-to-speech", {
+  const response = await fetch("/api/speechToText", {
     method: "POST",
     headers: {
-       "Content-Type": audioBlob.type || "application/octet-stream",
+      "Content-Type": audioBlob.type || "application/octet-stream",
     },
     body: audioBlob,
   });
 
-  return await response.text();
+  const { text } = await response.json();
+  return text;
 }
 
 const blobToBase64 = (blob, callback) => {

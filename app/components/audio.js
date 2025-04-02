@@ -7,13 +7,18 @@ export default function AudioRecording({ isLoading, updateQuestion, setIsLoading
     const { status,
         audioURL,
         audioBlob,
+        errorMessage,
         startRecording,
         stopRecording,
         resetRecording } = useAudioRecorder();
 
     const [text, setText] = useState("");
     useEffect(() => {
-        if (text != "") { updateQuestion(text); setText(""); }
+        if (text != "") { 
+            const cleanedText = text.replace(/^["']|["']$/g, '');
+            updateQuestion(cleanedText); 
+            setText(""); 
+        }
     }, [text]);
     useEffect(() => {
         async function getData() {
@@ -26,7 +31,7 @@ export default function AudioRecording({ isLoading, updateQuestion, setIsLoading
     }, [audioBlob]);
     //})
     return (
-        <div><RecordButton permissionRequested={true} recording={status} isLoading={isLoading} startRecording={startRecording} stopRecording={() => { setIsLoading(true); stopRecording(); }} /></div>
+        <div><RecordButton permissionRequested={true} recording={status} isLoading={isLoading} startRecording={startRecording} stopRecording={() => { setIsLoading(true); stopRecording(); }} errorMessage={errorMessage} /></div>
 
     )
 }
