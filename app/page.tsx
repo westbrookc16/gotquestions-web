@@ -199,35 +199,24 @@ export default function Home() {
 
                 setIsLoading(false);
 
-                // Append new content to temp buffer
-                tempChunk += content;
+                const spaced = appendChunkWithSmartSpacing(htmlString, content);
+                htmlString = spaced;
+                setHtml(spaced);
 
-                // Check if the current tempChunk probably ends a sentence or word
-                const safeToAppend = /[\s\.\,\?\!\)]$/.test(tempChunk);
-
-                if (safeToAppend) {
-                  const spaced = appendChunkWithSmartSpacing(
-                    htmlString,
-                    tempChunk
-                  );
-                  htmlString = spaced;
-                  setHtml(spaced);
-                  tempChunk = "";
-
-                  // Update the last message immediately with each chunk
-                  setMessages((prev) => {
-                    const newMessages = [...prev];
-                    newMessages[newMessages.length - 1] = {
-                      ...newMessages[newMessages.length - 1],
-                      answer: htmlString,
-                      html: htmlString,
-                      isLoading: false,
-                    };
-                    return newMessages;
-                  });
-                }
+                // Update the last message immediately with each chunk
+                setMessages((prev) => {
+                  const newMessages = [...prev];
+                  newMessages[newMessages.length - 1] = {
+                    ...newMessages[newMessages.length - 1],
+                    answer: htmlString,
+                    html: htmlString,
+                    isLoading: false,
+                  };
+                  return newMessages;
+                });
               }
             }
+
             buffer = lines[lines.length - 1];
           }
           break;
