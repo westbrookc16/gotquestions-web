@@ -1,5 +1,5 @@
 "use client";
-//import { appendChunkWithSmartSpacing } from "./utils/chunk";
+import { appendChunkWithSmartSpacing } from "./utils/chunk";
 import { track } from "@vercel/analytics";
 
 import { useState, useEffect, useRef } from "react";
@@ -210,7 +210,7 @@ export default function Home() {
               }
 
               // Trust GPT's output
-              htmlString += content;
+              htmlString = appendChunkWithSmartSpacing(htmlString, content);
               setHtml(htmlString);
 
               setMessages((prev) => {
