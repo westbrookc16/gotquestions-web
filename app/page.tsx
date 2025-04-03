@@ -278,7 +278,6 @@ export default function Home() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold mb-2">GotQuestions Assistant</h1>
-              <p className="text-muted-foreground">Ask questions and get answers from <a href="https://www.gotquestions.org/" className="text-primary hover:underline">GotQuestions.org</a></p>
             </div>
             <div className="flex items-center">
               <ThemeToggle />
@@ -357,10 +356,10 @@ export default function Home() {
       </div>
       <footer className="sticky bottom-0 bg-background ">
         <div className="container mx-auto px-4 py-2 mb-2 max-w-4xl">
-          <p className="text-sm text-muted-foreground/60 text-center">
+          <p className="text-xs sm:text-sm text-muted-foreground/60 text-center">
             Please note that this answer is read by an AI voice and not by a human.
           </p>
-          <p className="text-sm mv-2 text-muted-foreground/60 text-center">
+          <p className="text-xs sm:text-sm mv-2 text-muted-foreground/60 text-center">
             If you are technical and wish to view the github repository, it is located <a href="https://github.com/jason-m-hicks/gotquestions-assistant" className="text-primary hover:underline">here</a>.
           </p>
         </div>

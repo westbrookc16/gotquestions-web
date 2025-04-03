@@ -14,7 +14,7 @@ const RecordButton = ({ permissionRequested, isLoading, recording, startRecordin
   errorMessage: string | null
 }) => {
   const label = (permissionRequested: boolean, recording: string, isLoading: boolean) => {
-    if (isLoading) return "Recognising audio...";
+    if (isLoading && (recording === "recording" || recording === "stopped")) return "Recognising audio...";
     if (!permissionRequested) return "Grant Permission";
     if (recording === "error") return "Start Recording";
     return (recording === "stopped" || recording === "idle") ? "Start Recording" : "Stop Recording";

@@ -35,6 +35,7 @@ export default function QuestionInput({ onSubmit, updateQuestion, setIsLoading, 
 
     return (
         <div className="space-y-4">
+            <p className="text-muted-foreground text-center">Ask questions and get answers from <a href="https://www.gotquestions.org/" className="text-primary hover:underline">GotQuestions.org</a></p>
             <Form {...form}>
                 <form onSubmit={form.handleSubmit((values) => {
                     onSubmit(values);
