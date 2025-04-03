@@ -125,7 +125,7 @@ export default function Home() {
                 // *** CORE FIX: Simple Concatenation ***
                 accumulatedAnswer += content;
                 // ************************************
-
+                console.log(`content:${JSON.stringify(content)}`);
                 // Update the UI progressively
                 setHtml(accumulatedAnswer); // Update intermediate display if needed
 
