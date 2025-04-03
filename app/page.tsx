@@ -45,30 +45,7 @@ export default function Home() {
 
       setIsLoading(true);
       setErrorMsg("");
-      // Add the user's question and a placeholder for the answer
-      /*const newUserMessage: Message = {
-        id: Date.now() + "-q",
-        question: questionToAsk,
-        isLoading: false,
-        answer: "",
-        html: "",
-        sources: [],
-        isFetchingSources: false,
-      }; // User message isn't loading
-      const assistantMessagePlaceholder: Message = {
-        id: Date.now() + "-a",
-        question: "",
-        isLoading: true,
-        answer: "",
-        html: "",
-        sources: [],
-        isFetchingSources: false,
-      }; // Bot message starts loading
-      setMessages((prev) => [
-        ...prev,
-        newUserMessage,
-        assistantMessagePlaceholder,
-      ]);*/
+
       setHtml(""); // Reset intermediate display if used
 
       let response;
@@ -85,21 +62,7 @@ export default function Home() {
         console.error("Fetch initiation failed:", error);
         setErrorMsg("Failed to connect to the server. Please try again.");
         setIsLoading(false);
-        /*setMessages((prev) => {
-          const newMessages = [...prev];
-          if (
-            newMessages.length > 0 &&
-            newMessages[newMessages.length - 1].id ===
-              assistantMessagePlaceholder.id
-          ) {
-            newMessages[newMessages.length - 1].answer =
-              "Error connecting to server.";
-            newMessages[newMessages.length - 1].html =
-              "<p>Error connecting to server.</p>"; // Or some error html
-            newMessages[newMessages.length - 1].isLoading = false;
-          }
-          return newMessages;
-        });*/
+
         return;
       }
 
