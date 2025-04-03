@@ -413,7 +413,7 @@ export default function Home() {
             If you are technical and wish to view the github repository, it is
             located{" "}
             <a
-              href="https://github.com/jason-m-hicks/gotquestions-assistant"
+              href="https://github.com/westbrookc16/gotquestions-web"
               className="text-primary hover:underline"
             >
               here
