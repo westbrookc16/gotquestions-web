@@ -10,12 +10,26 @@ import { z } from "zod";
 import DictationSettings from "./components/DictationSettings";
 import QuestionInput from "./components/QuestionInput";
 import { ThemeToggle } from "./components/ThemeToggle";
-
+import { useCallback } from "react";
 const formSchema = z.object({
   question: z.string().nonempty("Question must be a string"),
 });
-
+interface Message {
+  question: string;
+  answer: string;
+  html: string;
+  sources: any[];
+  isLoading: boolean;
+  isFetchingSources: boolean;
+  audioSrc?: string;
+  id: string;
+}
 export default function Home() {
+  const [html, setHtml] = useState("");
+  const [answer, setAnswer] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+
   const [isLoading, setIsLoading] = useState(false);
   const [screenReaderLoadingMessage, setScreenReaderLoadingMessage] =
     useState("");
@@ -23,19 +37,265 @@ export default function Home() {
   const [submittedQuestion, setSubmittedQuestion] = useState("");
   const [voice, setVoice] = useState("alloy");
   const [audioEnabled, setAudioEnabled] = useState(false);
-  const [messages, setMessages] = useState<
-    Array<{
-      question: string;
-      answer: string;
-      html: string;
-      sources: any[];
-      isLoading: boolean;
-      isFetchingSources: boolean;
-      audioSrc?: string;
-    }>
-  >([]);
+  const [messages, setMessages] = useState<Array<Message>>([]);
   const mainRef = useRef<HTMLDivElement>(null);
+  const fetchAndStreamResponse = useCallback(
+    async (questionToAsk: string) => {
+      if (!questionToAsk) return;
 
+      setIsLoading(true);
+      setErrorMsg("");
+      // Add the user's question and a placeholder for the answer
+      /*const newUserMessage: Message = {
+        id: Date.now() + "-q",
+        question: questionToAsk,
+        isLoading: false,
+        answer: "",
+        html: "",
+        sources: [],
+        isFetchingSources: false,
+      }; // User message isn't loading
+      const assistantMessagePlaceholder: Message = {
+        id: Date.now() + "-a",
+        question: "",
+        isLoading: true,
+        answer: "",
+        html: "",
+        sources: [],
+        isFetchingSources: false,
+      }; // Bot message starts loading
+      setMessages((prev) => [
+        ...prev,
+        newUserMessage,
+        assistantMessagePlaceholder,
+      ]);*/
+      setHtml(""); // Reset intermediate display if used
+
+      let response;
+      try {
+        response = await fetch("/api/ask", {
+          // Your Next.js API route
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ question: questionToAsk }),
+        });
+      } catch (error) {
+        console.error("Fetch initiation failed:", error);
+        setErrorMsg("Failed to connect to the server. Please try again.");
+        setIsLoading(false);
+        /*setMessages((prev) => {
+          const newMessages = [...prev];
+          if (
+            newMessages.length > 0 &&
+            newMessages[newMessages.length - 1].id ===
+              assistantMessagePlaceholder.id
+          ) {
+            newMessages[newMessages.length - 1].answer =
+              "Error connecting to server.";
+            newMessages[newMessages.length - 1].html =
+              "<p>Error connecting to server.</p>"; // Or some error html
+            newMessages[newMessages.length - 1].isLoading = false;
+          }
+          return newMessages;
+        });*/
+        return;
+      }
+
+      if (!response.ok || !response.body) {
+        const errorText = await response.text();
+        console.error("Failed to get stream:", response.status, errorText);
+        setErrorMsg(`Error from server: ${response.status}. Please try again.`);
+        setIsLoading(false);
+        /*setMessages((prev) => {
+          const newMessages = [...prev];
+          if (
+            newMessages.length > 0 &&
+            newMessages[newMessages.length - 1].id ===
+              assistantMessagePlaceholder.id
+          ) {
+            newMessages[
+              newMessages.length - 1
+            ].answer = `Server error: ${response.status}`;
+            newMessages[
+              newMessages.length - 1
+            ].html = `<p>Server error: ${response.status}</p>`;
+            newMessages[newMessages.length - 1].isLoading = false;
+          }
+          return newMessages;
+        });*/
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let buffer = "";
+      let accumulatedAnswer = ""; // Use a dedicated variable for the answer text
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+
+          if (done) {
+            // Stream finished successfully
+            setIsLoading(false);
+            // Final update is handled below after the loop completes naturally
+            break; // Exit the loop
+          }
+
+          const chunk = decoder.decode(value, { stream: true });
+          buffer += chunk;
+
+          // Process buffer line by line (SSE messages end with \n\n)
+          // We might get multiple messages or partial messages in a chunk
+          let boundaryIndex;
+          while ((boundaryIndex = buffer.indexOf("\n\n")) >= 0) {
+            const message = buffer.substring(0, boundaryIndex);
+            buffer = buffer.substring(boundaryIndex + 2); // Remove message + \n\n
+
+            // Process the actual data lines within the message
+            const lines = message.split("\n");
+            for (const line of lines) {
+              if (line.startsWith("data:")) {
+                const content = line.substring(5).trim(); // Remove "data:" and trim whitespace
+
+                if (content === "[DONE]") {
+                  // Optional: Can treat this as an early signal, but the `done` flag from reader.read() is the definitive end.
+                  // console.log("Received [DONE] signal.");
+                  continue; // Continue processing buffer in case more data arrived with DONE
+                }
+                if (content.startsWith("ERROR:")) {
+                  const errorContent = content.replace("ERROR:", "").trim();
+                  console.error("Stream error:", errorContent);
+                  setErrorMsg(errorContent);
+                  setIsLoading(false); // Stop overall loading
+                  /*setMessages((prev) => {
+                    const newMessages = [...prev];
+                    if (
+                      newMessages.length > 0 &&
+                      newMessages[newMessages.length - 1].id ===
+                        assistantMessagePlaceholder.id
+                    ) {
+                      newMessages[
+                        newMessages.length - 1
+                      ].answer = `Error: ${errorContent}`;
+                      newMessages[
+                        newMessages.length - 1
+                      ].html = `<p>Error: ${errorContent}</p>`;
+                      newMessages[newMessages.length - 1].isLoading = false; // Stop message loading
+                    }
+                    return newMessages;
+                  });*/
+                  await reader.cancel(); // Stop reading the stream
+                  return; // Exit the function entirely
+                }
+
+                // *** CORE FIX: Simple Concatenation ***
+                accumulatedAnswer += content;
+                // ************************************
+
+                // Update the UI progressively
+                setHtml(accumulatedAnswer); // Update intermediate display if needed
+
+                setMessages((prev) => {
+                  const newMessages = [...prev];
+                  // Find the placeholder message and update it
+                  const msgIndex = newMessages.length - 1; // Assuming the last message is the one we want to update
+                  if (msgIndex > -1) {
+                    newMessages[msgIndex] = {
+                      ...newMessages[msgIndex],
+                      answer: accumulatedAnswer, // Update with current progress
+                      html: accumulatedAnswer, // Assuming html is same as answer for now
+                      isLoading: true, // Keep loading true while streaming
+                    };
+                  }
+                  return newMessages;
+                });
+              }
+            }
+          } // end while loop processing buffer
+        } // end while(true) reading stream
+
+        // ----- Stream has finished successfully -----
+        setIsLoading(false); // Ensure overall loading is off
+
+        // Final message update after loop finishes
+        let finalAudioSrc: string | undefined = undefined;
+        if (audioEnabled && accumulatedAnswer) {
+          setIsGeneratingAudio(true);
+          try {
+            finalAudioSrc = await generateAudio(accumulatedAnswer, voice);
+          } catch (audioError) {
+            console.error("Audio generation failed:", audioError);
+            // Optionally set an error state specific to audio
+          } finally {
+            setIsGeneratingAudio(false);
+          }
+        }
+
+        setMessages((prev) => {
+          const newMessages = [...prev];
+          const msgIndex = newMessages.length - 1;
+
+          if (msgIndex > -1) {
+            newMessages[msgIndex] = {
+              ...newMessages[msgIndex],
+              answer: accumulatedAnswer, // Final complete answer
+              html: accumulatedAnswer, // Final complete HTML
+              isLoading: false, // Set loading to false for this message
+              audioSrc: finalAudioSrc, // Add the generated audio source
+            };
+          }
+          return newMessages;
+        });
+        setSubmittedQuestion(""); // Clear submitted question only on success? Your choice.
+      } catch (error) {
+        // Catch errors during stream reading/processing
+        console.error("Error reading stream:", error);
+        setErrorMsg("An error occurred while receiving the response.");
+        setIsLoading(false);
+        setMessages((prev) => {
+          const newMessages = [...prev];
+          const msgIndex = newMessages.length - 1;
+
+          if (msgIndex > -1) {
+            newMessages[msgIndex].answer = "Error reading response.";
+            newMessages[msgIndex].html = "<p>Error reading response.</p>";
+            newMessages[msgIndex].isLoading = false;
+          }
+          return newMessages;
+        });
+        // Ensure reader is closed if it exists and stream errored
+        if (reader) {
+          await reader
+            .cancel()
+            .catch((cancelError) =>
+              console.error("Error cancelling reader:", cancelError)
+            );
+        }
+      }
+    },
+    [
+      audioEnabled,
+      voice,
+      setMessages,
+      setIsLoading,
+      setErrorMsg,
+      setHtml,
+      setIsGeneratingAudio,
+      setSubmittedQuestion /* Add other dependencies if generateAudio changes */,
+    ]
+  );
+
+  // You would likely call this function like this:
+  // useEffect(() => {
+  //   if (submittedQuestion) { // Check if a question has been submitted
+  //     fetchAndStreamResponse(submittedQuestion);
+  //   }
+  // }, [submittedQuestion, fetchAndStreamResponse]); // Run when submittedQuestion changes
+
+  // Now you can remove the `appendChunkWithSmartSpacing` function entirely.
   // Scroll to bottom whenever messages change
   useEffect(() => {
     if (mainRef.current) {
@@ -115,10 +375,6 @@ export default function Home() {
     setSubmittedQuestion(values["question"]);
   }
 
-  const [html, setHtml] = useState("");
-  const [answer, setAnswer] = useState("");
-  const [errorMsg, setErrorMsg] = useState("");
-  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
   useEffect(() => {
     async function getData() {
       if (submittedQuestion === "") return;
@@ -140,6 +396,7 @@ export default function Home() {
           sources: [],
           isLoading: true,
           isFetchingSources: false,
+          id: Date.now() + "-a",
         },
       ]);
 
