@@ -25,6 +25,7 @@ interface Message {
   id: string;
 }
 export default function Home() {
+  const [isGettingSources, setIsGettingSources] = useState(false);
   function cleanUpPunctuationSpacing(text: string): string {
     return text
       .replace(/\s+([.,!?;:])/g, "$1") // remove space before punctuation
@@ -139,7 +140,7 @@ export default function Home() {
                   accumulatedAnswer += cleaned; // Only update if there's new content
 
                   // ************************************
-                  console.log(`content:${JSON.stringify(content)}`);
+                  //console.log(`content:${JSON.stringify(content)}`);
                   // Update the UI progressively
                   setHtml(accumulatedAnswer); // Update intermediate display if needed
 
@@ -167,6 +168,11 @@ export default function Home() {
         setIsLoading(false); // Ensure overall loading is off
 
         // Final message update after loop finishes
+        const remaining = flush(); // Get any remaining text in the buffer
+        if (remaining) {
+          accumulatedAnswer += remaining; // Append any leftover text
+        }
+        accumulatedAnswer = cleanUpPunctuationSpacing(accumulatedAnswer); // Clean up final answer
         let finalAudioSrc: string | undefined = undefined;
         if (audioEnabled && accumulatedAnswer) {
           setIsGeneratingAudio(true);
@@ -179,11 +185,7 @@ export default function Home() {
             setIsGeneratingAudio(false);
           }
         }
-        const remaining = flush(); // Get any remaining text in the buffer
-        if (remaining) {
-          accumulatedAnswer += remaining; // Append any leftover text
-        }
-        accumulatedAnswer = cleanUpPunctuationSpacing(accumulatedAnswer); // Clean up final answer
+
         setMessages((prev) => {
           const newMessages = [...prev];
           const msgIndex = newMessages.length - 1;
@@ -313,7 +315,7 @@ export default function Home() {
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
+    //console.log(values);
     if (isLoading) return;
     track("text");
     setQuestion(values["question"]);
@@ -373,7 +375,7 @@ export default function Home() {
   useEffect(() => {
     async function getData() {
       if (submittedQuestion === "" || errorMsg !== "") return;
-
+      setIsGettingSources(true);
       // Update the last message to show sources are loading
       setMessages((prev) => {
         const newMessages = [...prev];
@@ -401,6 +403,7 @@ export default function Home() {
         };
         return newMessages;
       });
+      setIsGettingSources(false);
     }
     getData();
   }, [submittedQuestion]);
@@ -417,16 +420,22 @@ export default function Home() {
           toggle ? "Still loading, please wait..." : "Generating your answer..."
         );
       }, 10000);
+      /*if (isGettingSources) {
+        setScreenReaderLoadingMessage("Fetching sources...");
+      }*/
     } else {
-      setScreenReaderLoadingMessage("");
-      if (intervalId) clearInterval(intervalId);
+      if (isGeneratingAudio) {
+        setScreenReaderLoadingMessage("Generating audio...");
+      }
     }
+    if (intervalId) clearInterval(intervalId);
+    //}
 
     return () => {
       setScreenReaderLoadingMessage("");
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isLoading]);
+  }, [isLoading, isGeneratingAudio, isGettingSources]);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
@@ -531,6 +540,9 @@ export default function Home() {
           </p>
         </div>
       </footer>
+      <div className="sr-only" aria-live="polite">
+        {screenReaderLoadingMessage}
+      </div>
     </div>
   );
 }
