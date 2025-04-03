@@ -440,7 +440,7 @@ export default function Home() {
       setScreenReaderLoadingMessage("");
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isLoading, isGeneratingAudio, isGettingSources]);
+  }, [isLoading, isGeneratingAudio, isGettingSources, isDone, audioEnabled]);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
