@@ -1,5 +1,5 @@
 "use client";
-import { createSmartAppender } from "./utils/chunkBuffer";
+//import { createSmartAppender } from "./utils/chunkBuffer";
 import { track } from "@vercel/analytics";
 
 import { useState, useEffect, useRef } from "react";
@@ -52,7 +52,7 @@ export default function Home() {
   const fetchAndStreamResponse = useCallback(
     async (questionToAsk: string) => {
       if (!questionToAsk) return;
-      const { append, flush } = createSmartAppender();
+      //const { append, flush } = createSmartAppender();
 
       setIsLoading(true);
       setErrorMsg("");
@@ -135,31 +135,28 @@ export default function Home() {
                 }
 
                 // *** CORE FIX: Simple Concatenation ***
-                //accumulatedAnswer += content;
-                const cleaned = append(content); // Append using smart spacing
-                if (cleaned) {
-                  accumulatedAnswer += cleaned; // Only update if there's new content
+                accumulatedAnswer += content;
 
-                  // ************************************
-                  //console.log(`content:${JSON.stringify(content)}`);
-                  // Update the UI progressively
-                  setHtml(accumulatedAnswer); // Update intermediate display if needed
+                // ************************************
+                //console.log(`content:${JSON.stringify(content)}`);
+                // Update the UI progressively
+                setHtml(accumulatedAnswer); // Update intermediate display if needed
 
-                  setMessages((prev) => {
-                    const newMessages = [...prev];
-                    // Find the placeholder message and update it
-                    const msgIndex = newMessages.length - 1; // Assuming the last message is the one we want to update
-                    if (msgIndex > -1) {
-                      newMessages[msgIndex] = {
-                        ...newMessages[msgIndex],
-                        answer: accumulatedAnswer, // Update with current progress
-                        html: accumulatedAnswer, // Assuming html is same as answer for now
-                        isLoading: false, // set loading to false so content will be displayed
-                      };
-                    }
-                    return newMessages;
-                  });
-                }
+                setMessages((prev) => {
+                  const newMessages = [...prev];
+                  // Find the placeholder message and update it
+                  const msgIndex = newMessages.length - 1; // Assuming the last message is the one we want to update
+                  if (msgIndex > -1) {
+                    newMessages[msgIndex] = {
+                      ...newMessages[msgIndex],
+                      answer: accumulatedAnswer, // Update with current progress
+                      html: accumulatedAnswer, // Assuming html is same as answer for now
+                      isLoading: false, // set loading to false so content will be displayed
+                    };
+                  }
+                  return newMessages;
+                });
+                //}
               }
             }
           } // end while loop processing buffer
@@ -169,10 +166,10 @@ export default function Home() {
         setIsLoading(false); // Ensure overall loading is off
 
         // Final message update after loop finishes
-        const remaining = flush(); // Get any remaining text in the buffer
-        if (remaining) {
+        //const remaining = flush(); // Get any remaining text in the buffer
+        /*if (remaining) {
           accumulatedAnswer += remaining; // Append any leftover text
-        }
+        }*/
         accumulatedAnswer = cleanUpPunctuationSpacing(accumulatedAnswer); // Clean up final answer
         setIsDone(true);
         let finalAudioSrc: string | undefined = undefined;
