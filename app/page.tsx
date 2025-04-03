@@ -26,6 +26,7 @@ interface Message {
 }
 export default function Home() {
   const [isGettingSources, setIsGettingSources] = useState(false);
+  const [isDone, setIsDone] = useState(false);
   function cleanUpPunctuationSpacing(text: string): string {
     return text
       .replace(/\s+([.,!?;:])/g, "$1") // remove space before punctuation
@@ -173,7 +174,7 @@ export default function Home() {
           accumulatedAnswer += remaining; // Append any leftover text
         }
         accumulatedAnswer = cleanUpPunctuationSpacing(accumulatedAnswer); // Clean up final answer
-        setScreenReaderLoadingMessage("Done.");
+        setIsDone(true);
         let finalAudioSrc: string | undefined = undefined;
         if (audioEnabled && accumulatedAnswer) {
           setIsGeneratingAudio(true);
@@ -425,6 +426,9 @@ export default function Home() {
         setScreenReaderLoadingMessage("Fetching sources...");
       }*/
     } else {
+      if (isDone) {
+        setScreenReaderLoadingMessage("Done.");
+      }
       if (isGeneratingAudio) {
         setScreenReaderLoadingMessage("Generating audio...");
       }
