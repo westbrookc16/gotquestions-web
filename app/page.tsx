@@ -333,88 +333,7 @@ export default function Home() {
 
       while (attempt < maxAttempts) {
         try {
-          response = await fetch("/api/ask", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ question: submittedQuestion }),
-          });
-
-          if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-
-          setQuestion("");
-          let lastChar = "";
-          const reader = response.body?.getReader();
-          const decoder = new TextDecoder("utf-8");
-
-          let buffer = "";
-          let tempChunk = "";
-          while (true) {
-            //@ts-ignore
-            const { done, value } = await reader.read();
-
-            if (done) {
-              setAnswer(htmlString);
-              // Generate audio if dictation is enabled
-              let audioSrc: string | undefined = undefined;
-              if (audioEnabled) {
-                setIsGeneratingAudio(true);
-                audioSrc = await generateAudio(htmlString, voice);
-                setIsGeneratingAudio(false);
-              }
-              // Update the last message with the answer and audio
-              setMessages((prev) => {
-                const newMessages = [...prev];
-                newMessages[newMessages.length - 1] = {
-                  ...newMessages[newMessages.length - 1],
-                  answer: htmlString,
-                  html: htmlString,
-                  isLoading: false,
-                  audioSrc,
-                };
-                return newMessages;
-              });
-              break;
-            }
-            const chunk = decoder.decode(value, { stream: true });
-            buffer += chunk;
-
-            const lines = buffer.split("\n");
-
-            for (const line of lines) {
-              const trimmed = line.trim();
-              if (trimmed === "" || !trimmed.startsWith("data:")) continue;
-
-              const content = trimmed.replace(/^data:\s*/, "");
-              if (content === "[DONE]") {
-                setIsLoading(false);
-                setSubmittedQuestion("");
-                return;
-              }
-              if (content.startsWith("ERROR:")) {
-                setErrorMsg(content.replace("ERROR: ", ""));
-                setIsLoading(false);
-                setSubmittedQuestion("");
-                return;
-              }
-
-              // Trust GPT's output
-              htmlString = appendChunkWithSmartSpacing(htmlString, content);
-              setHtml(htmlString);
-
-              setMessages((prev) => {
-                const newMessages = [...prev];
-                newMessages[newMessages.length - 1] = {
-                  ...newMessages[newMessages.length - 1],
-                  answer: htmlString,
-                  html: htmlString,
-                  isLoading: false,
-                };
-                return newMessages;
-              });
-            }
-
-            buffer = buffer.endsWith("\n") ? "" : lines[lines.length - 1];
-          }
+          await fetchAndStreamResponse(submittedQuestion);
           break;
         } catch (err) {
           attempt++;
@@ -434,7 +353,7 @@ export default function Home() {
     }
 
     getData();
-  }, [submittedQuestion]);
+  }, [submittedQuestion, fetchAndStreamResponse]);
 
   const [sources, setSources] = useState([]);
   useEffect(() => {
