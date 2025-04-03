@@ -207,6 +207,63 @@ def getSources(request:Request):
             returned_docs.append({"url": url, "question": question_text})
 
     return {"sources": returned_docs}
+@app.function(
+    secrets=[modal.Secret.from_name("openai-secret"), modal.Secret.from_name("api-key")],
+    volumes={"/vectorstore": vectorstore_volume},
+    timeout=300,
+)
+@modal.fastapi_endpoint(method="POST", docs=True)
+async def nonStreamingAnswer(request: Request):
+    import os
+    from fastapi.responses import JSONResponse
+    from langchain_openai import ChatOpenAI
+    from langchain_core.messages import SystemMessage, HumanMessage
+
+    # Auth
+    api_key = os.environ["API_KEY"]
+    req_api_key = request.headers.get("x-api-key")
+    if api_key != req_api_key:
+        return Response("Unauthorized", status_code=401)
+
+    # Parse question
+    body = await request.json()
+    question = body.get("question")
+    if not question:
+        return JSONResponse({"error": "Missing 'question'"}, status_code=400)
+
+    # Retrieve docs
+    vector_store = Chroma(
+        persist_directory="/vectorstore",
+        embedding_function=OpenAIEmbeddings(model="text-embedding-3-large")
+    )
+
+    results = vector_store.similarity_search_with_score(question, k=5)
+    retrieved_docs = [doc for doc, score in results if score <= 0.9]
+
+    if not retrieved_docs:
+        return JSONResponse({"answer": "Sorry, I couldn’t find any relevant information to answer your question."})
+
+    # Prepare context and prompt
+    context_str = "\n\n".join(f"Source: {doc.metadata}\nContent: {doc.page_content}" for doc in retrieved_docs)
+    system_prompt = (
+        "You are an assistant for question-answering tasks. "
+        "Use the following pieces of retrieved context to answer the question. "
+        "If you don't know the answer, say that you don't know. "
+        "Use three sentences maximum and keep the answer concise. "
+        "Please respond using complete sentences with proper spacing and punctuation.\n\n"
+        f"{context_str}"
+    )
+
+    prompt = [
+        SystemMessage(content=system_prompt),
+        HumanMessage(content=question)
+    ]
+
+    # Run LLM without streaming
+    llm = ChatOpenAI(streaming=False)
+    response = llm.invoke(prompt)
+
+    return JSONResponse({"answer": response.content})
 
 @app.function(volumes={"/vectorstore": vectorstore_volume},secrets=[modal.Secret.from_name("openai-secret"), modal.Secret.from_name("langsmith-secret")],timeout=6000)
 def query_vectorstore(query: str):

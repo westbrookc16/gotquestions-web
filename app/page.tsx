@@ -348,7 +348,61 @@ export default function Home() {
 
       while (attempt < maxAttempts) {
         try {
-          await fetchAndStreamResponse(submittedQuestion);
+          const res = await fetch("/api/ask-nonstreaming", {
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
+            body: JSON.stringify({ question: submittedQuestion }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error("Failed to fetch data from server");
+          }
+          htmlString = data.answer;
+          setMessages((prev) => {
+            const newMessages = [...prev];
+            const msgIndex = newMessages.length - 1; // Assuming the last message is the one we want to update
+            if (msgIndex > -1) {
+              newMessages[msgIndex] = {
+                ...newMessages[msgIndex],
+                answer: htmlString, // Update with current progress
+                html: htmlString, // Assuming html is same as answer for now
+                isLoading: false, // set loading to false so content will be displayed
+              };
+            }
+            return newMessages;
+          });
+          setIsDone(true);
+          setIsLoading(false);
+
+          let finalAudioSrc: string | undefined = undefined;
+          if (audioEnabled && htmlString) {
+            setIsGeneratingAudio(true);
+            try {
+              finalAudioSrc = await generateAudio(htmlString, voice);
+            } catch (audioError) {
+              console.error("Audio generation failed:", audioError);
+              // Optionally set an error state specific to audio
+            } finally {
+              setIsGeneratingAudio(false);
+            }
+          }
+
+          setMessages((prev) => {
+            const newMessages = [...prev];
+            const msgIndex = newMessages.length - 1;
+
+            if (msgIndex > -1) {
+              newMessages[msgIndex] = {
+                ...newMessages[msgIndex],
+                //answer: accumulatedAnswer, // Final complete answer
+                //html: accumulatedAnswer, // Final complete HTML
+                isLoading: false, // Set loading to false for this message
+                audioSrc: finalAudioSrc, // Add the generated audio source
+              };
+            }
+            return newMessages;
+          });
+          setSubmittedQuestion(""); // Clear submitted question only on success? Your choice.
           break;
         } catch (err) {
           attempt++;
