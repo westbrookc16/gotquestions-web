@@ -25,6 +25,14 @@ interface Message {
   id: string;
 }
 export default function Home() {
+  function cleanUpPunctuationSpacing(text: string): string {
+    return text
+      .replace(/\s+([.,!?;:])/g, "$1") // remove space before punctuation
+      .replace(/([.,!?])([^\s])/g, "$1 $2") // ensure space after punctuation
+      .replace(/\s{2,}/g, " ") // collapse double spaces
+      .replace(/^\s+/, ""); // trim leading space
+  }
+
   const [html, setHtml] = useState("");
   const [answer, setAnswer] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
@@ -82,6 +90,7 @@ export default function Home() {
 
       try {
         while (true) {
+          //setIsLoading(false);
           const { done, value } = await reader.read();
 
           if (done) {
@@ -105,9 +114,9 @@ export default function Home() {
             const lines = message.split("\n");
             for (const line of lines) {
               if (line.startsWith("data:")) {
-                const content = line.substring(5).trim(); // Remove "data:" and trim whitespace
+                const content = line.substring(5);
 
-                if (content === "[DONE]") {
+                if (content.trim() === "[DONE]") {
                   // Optional: Can treat this as an early signal, but the `done` flag from reader.read() is the definitive end.
                   // console.log("Received [DONE] signal.");
                   continue; // Continue processing buffer in case more data arrived with DONE
@@ -138,7 +147,7 @@ export default function Home() {
                       ...newMessages[msgIndex],
                       answer: accumulatedAnswer, // Update with current progress
                       html: accumulatedAnswer, // Assuming html is same as answer for now
-                      isLoading: true, // Keep loading true while streaming
+                      isLoading: false, // set loading to false so content will be displayed
                     };
                   }
                   return newMessages;
@@ -164,7 +173,7 @@ export default function Home() {
             setIsGeneratingAudio(false);
           }
         }
-
+        accumulatedAnswer = cleanUpPunctuationSpacing(accumulatedAnswer); // Clean up final answer
         setMessages((prev) => {
           const newMessages = [...prev];
           const msgIndex = newMessages.length - 1;
@@ -252,11 +261,6 @@ export default function Home() {
       JSON.stringify({ enabled: audioEnabled })
     );
   }, [audioEnabled]);
-  function cleanUpPunctuationSpacing(text: string): string {
-    return text
-      .replace(/\s+([.,!?;:])/g, "$1") // remove space before punctuation
-      .replace(/([.,!?])([^\s])/g, "$1 $2"); // ensure space after punctuation
-  }
 
   const handleEnabledChange = (enabled: boolean) => {
     setAudioEnabled(enabled);

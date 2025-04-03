@@ -55,7 +55,7 @@ const Content = ({
             <>
               {html && (
                 <div className="prose prose-sm max-w-none">
-                  <div dangerouslySetInnerHTML={{ __html: html }} />
+                  <div>{html}</div>
                 </div>
               )}
 
