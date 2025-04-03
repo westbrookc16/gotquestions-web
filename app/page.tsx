@@ -173,6 +173,7 @@ export default function Home() {
           accumulatedAnswer += remaining; // Append any leftover text
         }
         accumulatedAnswer = cleanUpPunctuationSpacing(accumulatedAnswer); // Clean up final answer
+        setScreenReaderLoadingMessage("Done.");
         let finalAudioSrc: string | undefined = undefined;
         if (audioEnabled && accumulatedAnswer) {
           setIsGeneratingAudio(true);
