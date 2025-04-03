@@ -426,7 +426,7 @@ export default function Home() {
         setScreenReaderLoadingMessage("Fetching sources...");
       }*/
     } else {
-      if (isDone) {
+      if (isDone && !isGettingSources) {
         setScreenReaderLoadingMessage("Done.");
       }
       if (isGeneratingAudio) {
