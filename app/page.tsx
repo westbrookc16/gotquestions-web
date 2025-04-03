@@ -71,23 +71,7 @@ export default function Home() {
         console.error("Failed to get stream:", response.status, errorText);
         setErrorMsg(`Error from server: ${response.status}. Please try again.`);
         setIsLoading(false);
-        /*setMessages((prev) => {
-          const newMessages = [...prev];
-          if (
-            newMessages.length > 0 &&
-            newMessages[newMessages.length - 1].id ===
-              assistantMessagePlaceholder.id
-          ) {
-            newMessages[
-              newMessages.length - 1
-            ].answer = `Server error: ${response.status}`;
-            newMessages[
-              newMessages.length - 1
-            ].html = `<p>Server error: ${response.status}</p>`;
-            newMessages[newMessages.length - 1].isLoading = false;
-          }
-          return newMessages;
-        });*/
+        setSubmittedQuestion(""); // Clear submitted question on error
         return;
       }
 
@@ -133,23 +117,7 @@ export default function Home() {
                   console.error("Stream error:", errorContent);
                   setErrorMsg(errorContent);
                   setIsLoading(false); // Stop overall loading
-                  /*setMessages((prev) => {
-                    const newMessages = [...prev];
-                    if (
-                      newMessages.length > 0 &&
-                      newMessages[newMessages.length - 1].id ===
-                        assistantMessagePlaceholder.id
-                    ) {
-                      newMessages[
-                        newMessages.length - 1
-                      ].answer = `Error: ${errorContent}`;
-                      newMessages[
-                        newMessages.length - 1
-                      ].html = `<p>Error: ${errorContent}</p>`;
-                      newMessages[newMessages.length - 1].isLoading = false; // Stop message loading
-                    }
-                    return newMessages;
-                  });*/
+                  setSubmittedQuestion(""); // Clear submitted question on error
                   await reader.cancel(); // Stop reading the stream
                   return; // Exit the function entirely
                 }
