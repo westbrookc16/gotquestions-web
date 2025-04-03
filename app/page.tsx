@@ -274,10 +274,10 @@ export default function Home() {
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       <header className="sticky top-0 z-10 bg-background border-b">
-        <div className="container mx-auto px-4 py-4 max-w-4xl">
+        <div className="container mx-auto px-4 py-3 max-w-4xl">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold mb-2">GotQuestions Assistant</h1>
+              <h1 className="text-3xl font-bold">GotQuestions Assistant</h1>
             </div>
             <div className="flex items-center">
               <ThemeToggle />
@@ -321,6 +321,7 @@ export default function Home() {
               <div className="p-6 space-y-6 w-full max-w-2xl">
                 <div className="space-y-4">
                   <QuestionInput
+                    showSubHeading={true}
                     onSubmit={onSubmit}
                     updateQuestion={updateQuestion}
                     setIsLoading={setIsLoading}
@@ -333,7 +334,7 @@ export default function Home() {
         </div>
       </main>
 
-      <div className="container mx-auto px-10 py-4 max-w-4xl">
+      <div className="container mx-auto px-10 py-1 max-w-4xl">
         <div className="space-y-4">
           {(answer || messages.length > 0) && (
             <QuestionInput
@@ -360,7 +361,8 @@ export default function Home() {
             Please note that this answer is read by an AI voice and not by a human.
           </p>
           <p className="text-xs sm:text-sm mv-2 text-muted-foreground/60 text-center">
-            If you are technical and wish to view the github repository, it is located <a href="https://github.com/jason-m-hicks/gotquestions-assistant" className="text-primary hover:underline">here</a>.
+            <a href="https://github.com/jason-m-hicks/gotquestions-assistant" className="text-primary hover:underline">View on GitHub</a>.
+            w
           </p>
         </div>
       </footer>

@@ -19,13 +19,14 @@ const formSchema = z.object({
 });
 
 interface QuestionInputProps {
+    showSubHeading?: boolean;
     onSubmit: (values: z.infer<typeof formSchema>) => void;
     updateQuestion: (text: string) => void;
     setIsLoading: (loading: boolean) => void;
     isLoading: boolean;
 }
 
-export default function QuestionInput({ onSubmit, updateQuestion, setIsLoading, isLoading }: QuestionInputProps) {
+export default function QuestionInput({ showSubHeading, onSubmit, updateQuestion, setIsLoading, isLoading }: QuestionInputProps) {
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -35,7 +36,7 @@ export default function QuestionInput({ onSubmit, updateQuestion, setIsLoading, 
 
     return (
         <div className="space-y-4">
-            <p className="text-muted-foreground text-center">Ask questions and get answers from <a href="https://www.gotquestions.org/" className="text-primary hover:underline">GotQuestions.org</a></p>
+            {showSubHeading && <p className="text-muted-foreground text-center">Ask questions and get answers from <a href="https://www.gotquestions.org/" className="text-primary hover:underline">GotQuestions.org</a></p>}
             <Form {...form}>
                 <form onSubmit={form.handleSubmit((values) => {
                     onSubmit(values);
