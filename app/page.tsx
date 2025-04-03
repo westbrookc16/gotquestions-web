@@ -431,21 +431,10 @@ export default function Home() {
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       <header className="sticky top-0 z-10 bg-background border-b">
-        <div className="container mx-auto px-4 py-4 max-w-4xl">
+        <div className="container mx-auto px-4 py-3 max-w-4xl">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold mb-2">
-                GotQuestions Assistant
-              </h1>
-              <p className="text-muted-foreground">
-                Ask questions and get answers from{" "}
-                <a
-                  href="https://www.gotquestions.org/"
-                  className="text-primary hover:underline"
-                >
-                  GotQuestions.org
-                </a>
-              </p>
+              <h1 className="text-3xl font-bold">GotQuestions Assistant</h1>
             </div>
             <div className="flex items-center">
               <ThemeToggle />
@@ -491,6 +480,7 @@ export default function Home() {
               <div className="p-6 space-y-6 w-full max-w-2xl">
                 <div className="space-y-4">
                   <QuestionInput
+                    showSubHeading={true}
                     onSubmit={onSubmit}
                     updateQuestion={updateQuestion}
                     setIsLoading={setIsLoading}
@@ -503,7 +493,7 @@ export default function Home() {
         </div>
       </main>
 
-      <div className="container mx-auto px-10 py-4 max-w-4xl">
+      <div className="container mx-auto px-10 py-1 max-w-4xl">
         <div className="space-y-4">
           {(answer || messages.length > 0) && (
             <QuestionInput
@@ -526,18 +516,16 @@ export default function Home() {
       </div>
       <footer className="sticky bottom-0 bg-background ">
         <div className="container mx-auto px-4 py-2 mb-2 max-w-4xl">
-          <p className="text-sm text-muted-foreground/60 text-center">
+          <p className="text-xs sm:text-sm text-muted-foreground/60 text-center">
             Please note that this answer is read by an AI voice and not by a
             human.
           </p>
-          <p className="text-sm mv-2 text-muted-foreground/60 text-center">
-            If you are technical and wish to view the github repository, it is
-            located{" "}
+          <p className="text-xs sm:text-sm mv-2 text-muted-foreground/60 text-center">
             <a
               href="https://github.com/westbrookc16/gotquestions-web"
               className="text-primary hover:underline"
             >
-              here
+              View on GitHub
             </a>
             .
           </p>

@@ -69,12 +69,12 @@ const RecordButton = ({
           )}
         </span>
       </Button>
-      <div className="text-sm text-muted-foreground h-5">
-        {recording === "recording" && "Recording in progress..."}
-        {errorMessage && (
+
+      {errorMessage && (
+        <div className="text-sm text-muted-foreground h-5">
           <span className="text-destructive">{errorMessage}</span>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
