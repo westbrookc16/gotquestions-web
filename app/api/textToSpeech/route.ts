@@ -1,11 +1,17 @@
 export async function POST(req: Request) {
-  const { text,voice } = await req.json();
+  const { text, voice } = await req.json();
 
-  const response = await fetch("https://westbchris--speech-api-synthesize-speech.modal.run", {
-    method: "POST",
-    body: JSON.stringify({ text, voice }),
-    headers: { "Content-Type": "application/json","x-api-key": process.env.API_KEY || "" },
-  });
+  const response = await fetch(
+    "https://gotquestions-web-backend.fly.dev/speech/synthesized_speech",
+    {
+      method: "POST",
+      body: JSON.stringify({ text, voice }),
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.API_KEY || "",
+      },
+    }
+  );
 
   const audioBuffer = await response.arrayBuffer();
 

@@ -153,8 +153,7 @@ async def ask(request: Request):
         client.close()
 
 
-from speech import router as speech_router
-app.include_router(speech_router, prefix="/speech", tags=["speech"])
+
 
 
 

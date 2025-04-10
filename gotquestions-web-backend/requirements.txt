@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+openai
+tqdm
+ffmpeg-python
+langchain_openai
+langchain
+langchain_community
+langchain_chroma
+python-multipart
+supabase
+weaviate-client
+langchain_weaviate

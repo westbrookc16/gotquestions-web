@@ -1,24 +1,22 @@
-import modal
+
 from fastapi import Request  # add this
-from modal import Image, app, fastapi_endpoint
+
 
 import openai
 import os
 import io
 
-# Modal setup
-image = Image.debian_slim().pip_install("openai","fastapi[standard]")
-app = modal.App(name="speech-api", image=image)
+
 
 from fastapi import Request
 from fastapi.responses import StreamingResponse
 import openai
 import io
 import os
+from fastapi import APIRouter
 
-@app.function(secrets=[modal.Secret.from_name("openai-secret"),modal.Secret.from_name("api-key")])
-@fastapi_endpoint(method="POST",requires_proxy_auth=False,
-                                                                   )
+router = APIRouter()
+@router.post("/synthesize_speech")
 async def synthesize_speech(request: Request):
     #check for api key
     api_key=os.environ["API_KEY"]
@@ -47,8 +45,8 @@ async def synthesize_speech(request: Request):
 
 
 
-@app.function(secrets=[modal.Secret.from_name("openai-secret"),modal.Secret.from_name("api-key")])
-@fastapi_endpoint(method="POST",requires_proxy_auth=False,)
+
+@router.post("/transcribe_audio")
 async def transcribe_audio(request:Request) -> str:
     openai.api_key = os.environ["OPENAI_API_KEY"]
     #check for api key
