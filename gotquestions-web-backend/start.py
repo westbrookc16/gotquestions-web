@@ -3,14 +3,14 @@ import traceback
 from fastapi.responses import JSONResponse
 from langchain_core.messages import AIMessage
 from langchain_openai import OpenAIEmbeddings
-from langgraph.graph import MessagesState, StateGraph
+
 from langchain_core.messages import SystemMessage
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import CSVLoader
 #from langchain_chroma import Chroma
 from langchain_core.documents import Document
-from langchain_huggingface import HuggingFacePipeline
-from typing_extensions import List, TypedDict
+
+
 #import modal
 import os
 #from functools import lru_cache
@@ -36,8 +36,8 @@ app=FastAPI()
 
 
 
-
-
+from speech import router as speech_router
+app.include_router(speech_router, prefix="/speech", tags=["speech"])
 @app.get("/sources")
     
 def getSources(request:Request):
@@ -126,12 +126,12 @@ async def ask(request: Request):
             return JSONResponse({"answer": "Sorry, I couldn’t find any relevant information to answer your question."})
 
         # Prepare context and prompt
-        context_str = "\n\n".join(f"Source: {doc.metadata}\nContent: {doc.properties.get('answer')}" for doc in retrieved_docs)
+        context_str = "\n\n".join(f"Source: {doc.properties.get('question')}\nContent: {doc.properties.get('answer')}" for doc in retrieved_docs)
         system_prompt = (
             "You are an assistant for question-answering tasks. "
             "Use the following pieces of retrieved context to answer the question. "
             "If you don't know the answer, say that you don't know. "
-            "Use three sentences maximum and keep the answer concise. "
+            
             "\n\n"
             f"{context_str}"
         )
